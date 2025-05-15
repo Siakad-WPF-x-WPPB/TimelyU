@@ -161,6 +161,7 @@ class _FrsViewState extends State<FrsView> {
     );
   }
 
+// TODO: Ganti Warna Batas dan Sisa Dan font dan poop
   Widget _buildInfoRow(String label, String value) {
     double width = MediaQuery.of(context).size.width;
     return Row(
