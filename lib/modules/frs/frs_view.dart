@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 
 class FrsView extends StatefulWidget {
   const FrsView({super.key});
@@ -87,7 +88,7 @@ class _FrsViewState extends State<FrsView> {
                         children: [
                           // * Semester ------------------------------------------------
                           Text('Semester', style: TextStyle(fontSize: 16)),
-                         SizedBox(
+                          SizedBox(
                             height: height * 0.04,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -158,10 +159,11 @@ class _FrsViewState extends State<FrsView> {
           ),
         ),
       ),
+      bottomNavigationBar: const TaskBottomNavigationBar(),
     );
   }
 
-// TODO: Ganti Warna Batas dan Sisa Dan font dan poop
+  // TODO: Ganti Warna Batas dan Sisa Dan font dan poop
   Widget _buildInfoRow(String label, String value) {
     double width = MediaQuery.of(context).size.width;
     return Row(

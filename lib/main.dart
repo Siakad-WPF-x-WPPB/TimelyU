@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:timelyu/modules/task/task_binding.dart';
 
 import 'package:timelyu/routes/app_pages.dart';
 import 'package:timelyu/shared/themes/global_theme.dart';
@@ -17,8 +16,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       debugShowCheckedModeBanner: true,
       title: 'TimelyU',
-      initialRoute: '/tasks',
-      initialBinding: TaskBinding(),
+      initialRoute: '/',
       theme: AppTheme.lightTheme,
       getPages: AppPages.routes,
     );

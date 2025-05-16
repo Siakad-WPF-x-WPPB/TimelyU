@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'home_controller.dart';
+import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -435,6 +436,7 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
       ),
+      bottomNavigationBar: const TaskBottomNavigationBar(),
     );
   }
 }

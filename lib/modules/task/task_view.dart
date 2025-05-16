@@ -7,8 +7,8 @@ import 'package:timelyu/shared/widgets/task_list.dart';
 import 'task_controller.dart';
 
 // Main Task Screen
-class TaskScreen extends GetView<TaskController> {
-  const TaskScreen({Key? key}) : super(key: key);
+class TaskView extends GetView<TaskController> {
+  const TaskView({super.key});
 
   @override
   Widget build(BuildContext context) {
