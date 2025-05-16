@@ -60,7 +60,7 @@ class TaskController extends GetxController {
         };
       default:
         return {
-          'background': Colors.grey[100]!,
+          'background': Colors.grey[500]!,
           'text': Colors.grey[800]!,
         };
     }
