@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:timelyu/modules/auth/auth_controller.dart';
 import 'package:timelyu/modules/task/task_binding.dart';
 
 import 'package:timelyu/routes/app_pages.dart';
