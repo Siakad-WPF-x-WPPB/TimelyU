@@ -6,6 +6,8 @@ class AppRoutes {
   static const String schedule = '/schedule';
   static const String tasks = '/tasks';
   static const String frs = '/frs';
+  static const String nilai = '/nilai';
+  static const String profile = '/profile';
   static const String frsMemilih = '/frs-memilih';
   static const String fullSchedule = '/full-schedule';
 }

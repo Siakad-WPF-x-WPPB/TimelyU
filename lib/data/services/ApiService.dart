@@ -1,54 +1,24 @@
 import 'dart:convert';
+import 'dart:io'; // For HttpStatus
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+// Assuming user_model.dart is in lib/data/models/
+import 'package:timelyu/data/models/user_model.dart';
 
 // Kelas untuk menangani respon API secara generik
 class ApiResponse<T> {
   final bool success;
   final String? message;
   final T? data;
+  final int? statusCode; // Optional: good for debugging or specific error handling
 
-  ApiResponse({required this.success, this.message, this.data});
+  ApiResponse({required this.success, this.message, this.data, this.statusCode});
 
-  factory ApiResponse.success(T data) => 
-      ApiResponse(success: true, data: data);
-  
-  factory ApiResponse.error(String message) => 
-      ApiResponse(success: false, message: message);
-}
+  factory ApiResponse.success(T data, {int? statusCode = HttpStatus.ok}) =>
+      ApiResponse(success: true, data: data, statusCode: statusCode);
 
-// Model untuk data user
-class UserModel {
-  final String id;
-  final String name;
-  final String email;
-  final String? role;
-  // Tambahkan properti lain sesuai kebutuhan
-
-  UserModel({
-    required this.id, 
-    required this.name, 
-    required this.email, 
-    this.role,
-  });
-
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['id']?.toString() ?? '', // Menambahkan null safety
-      name: json['name']?.toString() ?? '', // Menambahkan null safety
-      email: json['email']?.toString() ?? '', // Menambahkan null safety
-      role: json['role']?.toString(), // Sudah nullable
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'role': role,
-    };
-  }
+  factory ApiResponse.error(String message, {int? statusCode}) =>
+      ApiResponse(success: false, message: message, statusCode: statusCode);
 }
 
 class ApiService {
@@ -80,6 +50,8 @@ class ApiService {
         return UserModel.fromJson(jsonDecode(userString));
       } catch (e) {
         print('Error parsing cached user data: $e');
+        // Optionally clear corrupted data
+        // await prefs.remove(_userKey);
         return null;
       }
     }
@@ -99,10 +71,9 @@ class ApiService {
       'Content-Type': 'application/json',
     };
 
-    if (requiresAuth && token != null) {
+    if (requiresAuth && token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
-
     return headers;
   }
 
@@ -119,35 +90,35 @@ class ApiService {
       );
 
       final Map<String, dynamic> data = jsonDecode(response.body);
-      
-      if (response.statusCode == 200) {
-        // Periksa apakah token ada dan bukan null
+
+      if (response.statusCode == HttpStatus.ok) { // 200
         final token = data['token']?.toString();
         if (token == null || token.isEmpty) {
-          return ApiResponse.error('Token tidak ditemukan dari server');
+          return ApiResponse.error('Token tidak ditemukan dari server', statusCode: response.statusCode);
         }
-        
-        // Simpan token
         await _saveToken(token);
-        
-        // Periksa apakah data user ada
+
         if (data['user'] != null && data['user'] is Map<String, dynamic>) {
           try {
             final userModel = UserModel.fromJson(data['user']);
             await _saveUserData(data['user']);
-            return ApiResponse.success(userModel);
+            return ApiResponse.success(userModel, statusCode: response.statusCode);
           } catch (e) {
-            return ApiResponse.error('Format data pengguna tidak valid: ${e.toString()}');
+            return ApiResponse.error('Format data pengguna tidak valid: ${e.toString()}', statusCode: response.statusCode);
           }
         } else {
-          return ApiResponse.error('Data pengguna tidak ditemukan');
+          return ApiResponse.error('Data pengguna tidak ditemukan dari server', statusCode: response.statusCode);
         }
       } else {
-        final message = data['message']?.toString() ?? 'Login gagal';
-        return ApiResponse.error(message);
+        final message = data['message']?.toString() ?? 'Login gagal. Status: ${response.statusCode}';
+        return ApiResponse.error(message, statusCode: response.statusCode);
       }
+    } on SocketException {
+        return ApiResponse.error('Tidak ada koneksi internet atau server tidak terjangkau.');
+    } on FormatException {
+        return ApiResponse.error('Gagal memproses respons dari server.');
     } catch (e) {
-      return ApiResponse.error('Terjadi kesalahan: ${e.toString()}');
+      return ApiResponse.error('Terjadi kesalahan saat login: ${e.toString()}');
     }
   }
 
@@ -155,7 +126,7 @@ class ApiService {
     try {
       final token = await getToken();
       if (token == null) {
-        return ApiResponse.error('Token tidak ditemukan');
+        return ApiResponse.error('Token tidak ditemukan. Silakan login kembali.', statusCode: HttpStatus.unauthorized);
       }
 
       final response = await http.get(
@@ -163,31 +134,47 @@ class ApiService {
         headers: _getHeaders(requiresAuth: true, token: token),
       );
 
-      if (response.statusCode == 200) {
-        try {
-          final Map<String, dynamic> data = jsonDecode(response.body);
-          final userData = data['user'] is Map<String, dynamic> 
-              ? data['user'] 
-              : (data is Map<String, dynamic> ? data : {});
-          
-          if (userData.isEmpty) {
-            return ApiResponse.error('Data pengguna kosong');
-          }
-          
-          final userModel = UserModel.fromJson(userData);
-          await _saveUserData(userData);
-          return ApiResponse.success(userModel);
-        } catch (e) {
-          return ApiResponse.error('Gagal memproses data profil: ${e.toString()}');
+      if (response.statusCode == HttpStatus.ok) { // 200
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        // Expect profile data under 'user' key or directly at root based on your original logic
+        Map<String, dynamic>? userData;
+        if (responseData['user'] is Map<String, dynamic>) {
+            userData = responseData['user'];
+        } else if (responseData is Map<String, dynamic> && responseData.isNotEmpty) {
+            // Fallback if user data is at the root of the response
+            userData = responseData;
         }
-      } else if (response.statusCode == 401) {
+
+        if (userData == null || userData.isEmpty) {
+          return ApiResponse.error('Data pengguna kosong atau format tidak sesuai dari server.', statusCode: response.statusCode);
+        }
+
+        try {
+          final userModel = UserModel.fromJson(userData);
+          await _saveUserData(userData); // Cache the latest profile
+          return ApiResponse.success(userModel, statusCode: response.statusCode);
+        } catch (e) {
+          return ApiResponse.error('Gagal memproses data profil: ${e.toString()}', statusCode: response.statusCode);
+        }
+      } else if (response.statusCode == HttpStatus.unauthorized) { // 401
         await clearAuthData();
-        return ApiResponse.error('Sesi berakhir, silakan login kembali');
+        return ApiResponse.error('Sesi berakhir, silakan login kembali', statusCode: response.statusCode);
       } else {
-        return ApiResponse.error('Gagal mengambil profil: ${response.body}');
+        String errorMessage = 'Gagal mengambil profil.';
+        try {
+            final Map<String, dynamic> errorData = jsonDecode(response.body);
+            errorMessage = errorData['message'] as String? ?? 'Gagal mengambil profil. Status: ${response.statusCode}';
+        } catch (_) {
+            errorMessage = 'Gagal mengambil profil (respons tidak valid). Status: ${response.statusCode}';
+        }
+        return ApiResponse.error(errorMessage, statusCode: response.statusCode);
       }
+    } on SocketException {
+        return ApiResponse.error('Tidak ada koneksi internet atau server tidak terjangkau.');
+    } on FormatException {
+        return ApiResponse.error('Gagal memproses respons dari server.');
     } catch (e) {
-      return ApiResponse.error('Terjadi kesalahan: ${e.toString()}');
+      return ApiResponse.error('Terjadi kesalahan saat mengambil profil: ${e.toString()}');
     }
   }
 
@@ -195,7 +182,7 @@ class ApiService {
     try {
       final token = await getToken();
       if (token == null) {
-        return ApiResponse.error('Token tidak ditemukan');
+        return ApiResponse.error('Token tidak ditemukan', statusCode: HttpStatus.unauthorized);
       }
 
       final response = await http.get(
@@ -203,51 +190,72 @@ class ApiService {
         headers: _getHeaders(requiresAuth: true, token: token),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == HttpStatus.ok) { // 200
         try {
           final data = jsonDecode(response.body);
           if (data is Map<String, dynamic>) {
-            return ApiResponse.success(data);
+            return ApiResponse.success(data, statusCode: response.statusCode);
           } else {
-            return ApiResponse.error('Format data tidak valid');
+            return ApiResponse.error('Format data tidak valid dari server', statusCode: response.statusCode);
           }
         } catch (e) {
-          return ApiResponse.error('Gagal memproses data: ${e.toString()}');
+          return ApiResponse.error('Gagal memproses data: ${e.toString()}', statusCode: response.statusCode);
         }
-      } else if (response.statusCode == 401) {
+      } else if (response.statusCode == HttpStatus.unauthorized) { // 401
         await clearAuthData();
-        return ApiResponse.error('Sesi berakhir, silakan login kembali');
+        return ApiResponse.error('Sesi berakhir, silakan login kembali', statusCode: response.statusCode);
       } else {
-        return ApiResponse.error('Gagal mengambil data mahasiswa: ${response.body}');
+         String errorMessage = 'Gagal mengambil data mahasiswa.';
+        try {
+            final Map<String, dynamic> errorData = jsonDecode(response.body);
+            errorMessage = errorData['message'] as String? ?? 'Gagal mengambil data mahasiswa. Status: ${response.statusCode}';
+        } catch (_) {
+            errorMessage = 'Gagal mengambil data mahasiswa (respons tidak valid). Status: ${response.statusCode}';
+        }
+        return ApiResponse.error(errorMessage, statusCode: response.statusCode);
       }
+    } on SocketException {
+        return ApiResponse.error('Tidak ada koneksi internet atau server tidak terjangkau.');
+    } on FormatException {
+        return ApiResponse.error('Gagal memproses respons dari server.');
     } catch (e) {
-      return ApiResponse.error('Terjadi kesalahan: ${e.toString()}');
+      return ApiResponse.error('Terjadi kesalahan saat mengambil data mahasiswa: ${e.toString()}');
     }
   }
 
   Future<ApiResponse<bool>> logout() async {
-    try {
-      final token = await getToken();
-      if (token == null) return ApiResponse.success(true); // Sudah logout
+    final token = await getToken();
+    // Always clear local data regardless of API call success for logout
+    await clearAuthData();
 
+    if (token == null) {
+      return ApiResponse.success(true, statusCode: HttpStatus.ok); // Already logged out locally
+    }
+
+    try {
       final response = await http.post(
         Uri.parse('$_baseUrl/logout'),
         headers: _getHeaders(requiresAuth: true, token: token),
       );
 
-      await clearAuthData();
-      
-      if (response.statusCode == 200) {
-        return ApiResponse.success(true);
+      if (response.statusCode == HttpStatus.ok) { // 200
+        return ApiResponse.success(true, statusCode: response.statusCode);
       } else {
-        // Tetap menganggap logout sukses meskipun API gagal
-        // karena kita sudah menghapus token lokal
-        return ApiResponse.success(true);
+        // Even if API logout fails, client-side logout is already done.
+        // Optionally log the server error message.
+        print("API logout failed with status ${response.statusCode}: ${response.body}");
+        return ApiResponse.success(true, statusCode: response.statusCode); // Client considers it a success
       }
+    } on SocketException {
+        print("API logout failed: No internet or server unreachable.");
+        return ApiResponse.success(true); // Client still considers logout successful
+    } on FormatException {
+        print("API logout failed: Bad response format.");
+        return ApiResponse.success(true);
     } catch (e) {
-      // Hapus token lokal meskipun terjadi error
-      await clearAuthData();
-      return ApiResponse.error('Terjadi kesalahan saat logout: ${e.toString()}');
+      print("Error during API logout call: $e");
+      // Still return success because local data is cleared.
+      return ApiResponse.error('Terjadi kesalahan saat logout di server, namun data lokal sudah dihapus: ${e.toString()}');
     }
   }
 

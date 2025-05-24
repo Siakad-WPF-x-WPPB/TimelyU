@@ -1,7 +1,10 @@
+// File: lib/modules/home/home_view.dart (Updated)
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:timelyu/modules/auth/auth_controller.dart';
+import 'package:timelyu/modules/home/profile_view.dart';
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
-import 'home_controller.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -11,7 +14,7 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  final HomeController _controller = Get.put(HomeController());
+  final AuthController _authController = Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -23,38 +26,82 @@ class _HomeViewState extends State<HomeView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // *** Header Section ***
-              // **
-              // ** This section will show the user profile and greeting message
-              // ** It will also show the NRP
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "Halo, Botak!",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                  Obx(() {
+                    final userName = _authController.user.value?.nama ?? "Pengguna";
+                    final userNrp = _authController.user.value?.nrp ?? "Memuat...";
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Halo, $userName!",
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text("3123500038", style: TextStyle(fontSize: 16)),
-                    ],
-                  ),
+                        const SizedBox(height: 4),
+                        Text(userNrp, style: const TextStyle(fontSize: 16)),
+                      ],
+                    );
+                  }),
                   PopupMenuButton(
-                    icon: const Icon(Icons.menu, size: 32,),
+                    icon: const Icon(Icons.menu, size: 32),
                     itemBuilder: (context) => [
                       const PopupMenuItem(
                         value: 1,
-                        child: Text("Profile"),
+                        child: Row(
+                          children: [
+                            Icon(Icons.person, size: 18),
+                            SizedBox(width: 8),
+                            Text("Profile"),
+                          ],
+                        ),
                       ),
                       const PopupMenuItem(
                         value: 2,
-                        child: Text("Logout"),
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout, size: 18),
+                            SizedBox(width: 8),
+                            Text("Logout"),
+                          ],
+                        ),
                       ),
                     ],
+                    onSelected: (value) {
+                      if (value == 1) {
+                        // Navigasi ke halaman Profile
+                        Get.to(() => ProfileView());
+                      } else if (value == 2) {
+                        // Konfirmasi logout
+                        Get.dialog(
+                          AlertDialog(
+                            title: const Text('Konfirmasi Logout'),
+                            content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: const Text('Batal'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Get.back();
+                                  _authController.logout();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Logout'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -62,20 +109,17 @@ class _HomeViewState extends State<HomeView> {
               const SizedBox(height: 24),
 
               // *** Next Class Section ***
-              // **
-              // ** This section will show the next class with a card layout
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Kelas Saat Ini
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Color(0xFF0056B3),
+                      color: const Color(0xFF0056B3),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Column(
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -135,42 +179,20 @@ class _HomeViewState extends State<HomeView> {
                                 fontSize: 13,
                               ),
                             ),
-                            Spacer(),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                "00:28",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 12),
-
-                  // *** Next Class Card ***
-                  // **
-                  // ** This section will show the next class with a card layout
+                  const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Color(0xFFFFC107),
+                      color: const Color(0xFFFFC107),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Column(
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -230,11 +252,9 @@ class _HomeViewState extends State<HomeView> {
               const SizedBox(height: 24),
 
               // *** Next Assignment Section ***
-              // **
-              // ** This section will show the next assignments with a horizontal scroll
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text(
                     "Tugas Mendatang",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -251,8 +271,8 @@ class _HomeViewState extends State<HomeView> {
                   itemBuilder: (context, index) {
                     return Container(
                       width: MediaQuery.of(context).size.width * 0.75,
-                      margin: EdgeInsets.only(right: 16),
-                      padding: EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(right: 16),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -260,15 +280,15 @@ class _HomeViewState extends State<HomeView> {
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
                             blurRadius: 8,
-                            offset: Offset(0, 4),
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: Column(
+                      child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Clustering Dataset Milk.csv Menggunakan Metode K-Means",
+                            "Clustering Dataset Milk.csv",
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -276,12 +296,12 @@ class _HomeViewState extends State<HomeView> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             "Kecerdasan Buatan",
                             style: TextStyle(fontSize: 13, color: Colors.grey),
                           ),
-                          const Spacer(),
+                          Spacer(),
                           Row(
                             children: [
                               Icon(
@@ -291,45 +311,13 @@ class _HomeViewState extends State<HomeView> {
                               ),
                               SizedBox(width: 6),
                               Text(
-                                "17 Mei 2025",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Icon(
-                                Icons.access_time,
-                                size: 16,
-                                color: Colors.grey,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                "23:59",
+                                "27 Mei 2025",
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey,
                                 ),
                               ),
                               Spacer(),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFF007BFF),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  "7 Hari",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ],
@@ -342,11 +330,9 @@ class _HomeViewState extends State<HomeView> {
               const SizedBox(height: 24),
 
               // *** Announcement Section ***
-              // **
-              // ** This section will show the announcements with a vertical scroll
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text(
                     "Pengumuman",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -354,21 +340,18 @@ class _HomeViewState extends State<HomeView> {
                   Icon(Icons.chevron_right),
                 ],
               ),
-
               const SizedBox(height: 16),
-
-              // Announcement Card 1
               Container(
                 decoration: BoxDecoration(
                   color: Colors.orange[100],
                   borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.all(16),
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      "Pengumuman Webinar Alumni PENS",
+                      "Pengumuman Webinar Alumni",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -376,66 +359,8 @@ class _HomeViewState extends State<HomeView> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam...",
+                      "Akan ada webinar alumni pada tanggal 30 Mei 2025. Segera daftarkan diri Anda!",
                       style: TextStyle(fontSize: 14),
-                    ),
-                    SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          "8 Nov, 2023",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Announcement Card 2
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.green[100],
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      "Pengumuman Webinar Alumni PENS",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam...",
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          "8 Nov, 2023",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -444,7 +369,7 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
       ),
-      bottomNavigationBar: TaskBottomNavigationBar(),
+      bottomNavigationBar: const TaskBottomNavigationBar(),
     );
   }
 }

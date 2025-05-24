@@ -18,6 +18,8 @@ class TaskBottomNavigationBar extends StatelessWidget {
       currentIndex = 2;
     } else if (route == '/frs') {
       currentIndex = 3;
+    } else if (route == '/nilai') {
+      currentIndex = 4;
     }
 
     return CircleNavBar(
@@ -26,12 +28,14 @@ class TaskBottomNavigationBar extends StatelessWidget {
         Icon(Icons.list_alt, color: Colors.white),
         Icon(Icons.bookmark, color: Colors.white),
         Icon(Icons.notifications, color: Colors.white),
+        Icon(Icons.person, color: Colors.white),
       ],
       inactiveIcons: [
         Icon(Icons.home, color: Colors.grey[400]),
         Icon(Icons.list_alt, color: Colors.grey[400]),
         Icon(Icons.bookmark, color: Colors.grey[400]),
         Icon(Icons.notifications, color: Colors.grey[400]),
+        Icon(Icons.person, color: Colors.grey[400]),
       ],
       color: Colors.white,
       circleColor: Colors.blue,
@@ -51,6 +55,9 @@ class TaskBottomNavigationBar extends StatelessWidget {
             break;
           case 3:
             Get.offNamed('/frs');
+            break;
+          case 4:
+            Get.offNamed('/nilai');
             break;
         }
       },
