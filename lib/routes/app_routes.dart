@@ -1,7 +1,11 @@
-abstract class AppRoutes {
-  static const root = '/';
-  static const home = '/home';
-  static const schedule = '/schedule';
-  static const tasks = '/tasks';
-  static const frs = '/frs';
+class AppRoutes {
+  static const String root = '/'; // Mengarah ke login
+  static const String login = '/login'; // Bisa juga AppRoutes.root langsung ke /login
+  static const String main = '/main';
+  static const String home = '/home';
+  static const String schedule = '/schedule';
+  static const String tasks = '/tasks';
+  static const String frs = '/frs';
+  static const String frsMemilih = '/frs-memilih';
+  static const String fullSchedule = '/full-schedule';
 }

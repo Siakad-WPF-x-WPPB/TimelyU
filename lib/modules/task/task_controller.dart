@@ -1,3 +1,4 @@
+// lib/controllers/task_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/data/models/task_model.dart';
@@ -9,11 +10,12 @@ class TaskController extends GetxController {
   // State variables
   final RxString selectedFilter = 'Semua'.obs;
   final RxList<TaskModel> filteredTasks = <TaskModel>[].obs;
+  final RxBool isLoading = false.obs;
   
   @override
   void onInit() {
     super.onInit();
-    // Inisialisasi daftar tugas
+    // Initialize task list
     updateFilteredTasks();
   }
   
@@ -24,20 +26,32 @@ class TaskController extends GetxController {
   }
   
   // Update filtered tasks based on selected filter
-  void updateFilteredTasks() {
-    filteredTasks.assignAll(_taskService.getTasksByFilter(selectedFilter.value));
+  Future<void> updateFilteredTasks() async {
+    isLoading.value = true;
+    try {
+      final tasks = await _taskService.getTasksByFilter(selectedFilter.value);
+      filteredTasks.assignAll(tasks);
+    } finally {
+      isLoading.value = false;
+    }
   }
   
   // Toggle task completion status
-  void toggleTaskCompletion(String id, bool isCompleted) {
-    _taskService.toggleTaskCompletion(id, isCompleted);
-    updateFilteredTasks(); // Refresh list after update
+  Future<void> toggleTaskCompletion(String id, bool isCompleted) async {
+    await _taskService.toggleTaskCompletion(id, isCompleted);
+    await updateFilteredTasks(); // Refresh list after update
   }
   
   // Add a new task
-  void addTask(TaskModel task) {
-    _taskService.addTask(task);
-    updateFilteredTasks(); // Refresh list after adding
+  Future<void> addTask(TaskModel task) async {
+    await _taskService.addTask(task);
+    await updateFilteredTasks(); // Refresh list after adding
+  }
+  
+  // Delete a task
+  Future<void> deleteTask(String id) async {
+    await _taskService.deleteTask(id);
+    await updateFilteredTasks(); // Refresh list after deleting
   }
   
   // Get color configuration for status badge
@@ -53,14 +67,14 @@ class TaskController extends GetxController {
           'background': Colors.red[100]!,
           'text': Colors.red[800]!,
         };
-      case 'Hari ini':
+      case 'Belum Selesai':
         return {
-          'background': Colors.purple[100]!,
-          'text': Colors.purple[800]!,
+          'background': Colors.orange[100]!,
+          'text': Colors.orange[800]!,
         };
       default:
         return {
-          'background': Colors.grey[500]!,
+          'background': Colors.grey[100]!,
           'text': Colors.grey[800]!,
         };
     }

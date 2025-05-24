@@ -1,26 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:timelyu/modules/frs/frs_controller.dart';
+import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 
-class FrsView extends StatefulWidget {
+class FrsView extends GetView<FrsController> {
   const FrsView({super.key});
 
   @override
-  State<FrsView> createState() => _FrsViewState();
-}
-
-class _FrsViewState extends State<FrsView> {
-  final items = ['Item 1', 'Item 2', 'Item 3', 'Item 4'];
-  String? value;
-
-  @override
   Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    double height = MediaQuery.of(context).size.height;
+    final FrsController controller = Get.put(FrsController());
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Persetubuhan FRS'),
+        title: const Text('Persetujuan FRS'),
         centerTitle: true,
         backgroundColor: Colors.white,
       ),
@@ -28,152 +22,146 @@ class _FrsViewState extends State<FrsView> {
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: width * 0.05,
-              vertical: height * 0.02,
+              horizontal: Get.width * 0.05,
+              vertical: Get.height * 0.02,
             ),
             child: Column(
               children: [
-                // * Tahun Ajar dan Semester Dropdown --------------------------------
-                Row(
-                  spacing: 8,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Tahun Ajar', style: TextStyle(fontSize: 14)),
-                          SizedBox(
-                            height: height * 0.04,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8.0,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.black26,
-                                  width: 1,
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton(
-                                  icon: Icon(
-                                    PhosphorIcons.caretDown(
-                                      PhosphorIconsStyle.regular,
-                                    ),
-                                    size: 14,
-                                  ),
-                                  isExpanded: true,
-                                  value: value,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                  ),
-                                  items: items.map(buildMenuItem).toList(),
-                                  onChanged:
-                                      (value) =>
-                                          setState(() => this.value = value),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // * Semester ------------------------------------------------
-                          Text('Semester', style: TextStyle(fontSize: 16)),
-                         SizedBox(
-                            height: height * 0.04,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8.0,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.black26,
-                                  width: 1,
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton(
-                                  icon: Icon(
-                                    PhosphorIcons.caretDown(
-                                      PhosphorIconsStyle.regular,
-                                    ),
-                                    size: 14,
-                                  ),
-                                  isExpanded: true,
-                                  value: value,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                  ),
-                                  items: items.map(buildMenuItem).toList(),
-                                  onChanged:
-                                      (value) =>
-                                          setState(() => this.value = value),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                // * Info Fields ----------------------------------------------------------
+                _buildDropdownSection(),
                 const SizedBox(height: 16),
-                _buildInfoRow('Dosen Wali', 'S.kom Jakobowo'),
-                const SizedBox(height: 8),
-                _buildKreditRow('Batas / Sisa', '24', '20'),
-                const SizedBox(height: 8),
-                _buildInfoRow('Pengisian', '07-08-2023'),
+                _buildInfoSection(),
                 const SizedBox(height: 16),
-
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: 1,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: height * 0.02),
-                      child: buildFrsCard(
-                        namaMatakuliah: "Adolf Ismaran S.kom",
-                        status: "Ditolak",
-                        pengajar: "Adolf Ismaran S.kom",
-                        waktu: "08:00 sd 11:00 WIB",
-                        kelas: "Kelas B",
-                      ),
-                    );
-                  },
-                ),
+                _buildFrsListSection(),
               ],
             ),
           ),
         ),
       ),
+      floatingActionButton: _buildFloatingActionButton(),
+      bottomNavigationBar: const TaskBottomNavigationBar(),
     );
   }
 
-// TODO: Ganti Warna Batas dan Sisa Dan font dan poop
+  Widget _buildDropdownSection() {
+    return Row(
+      spacing: 8,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Expanded(
+          child: _buildDropdownField(
+            label: 'Tahun Ajar',
+            value: controller
+            .selectedTahunAjar,
+            onChanged: controller.onTahunAjarChanged,
+          ),
+        ),
+        Expanded(
+          child: _buildDropdownField(
+            label: 'Semester',
+            value: controller.selectedSemester,
+            onChanged: controller.onSemesterChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required Rxn<String> value,
+    required Function(String?) onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 14)),
+        SizedBox(
+          height: Get.height * 0.04,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black26, width: 1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: Obx(() => DropdownButton<String>(
+                icon: Icon(
+                  PhosphorIcons.caretDown(PhosphorIconsStyle.regular),
+                  size: 14,
+                ),
+                isExpanded: true,
+                value: value.value,
+                style: const TextStyle(fontSize: 14, color: Colors.black),
+                items: controller.items.map(_buildMenuItem).toList(),
+                onChanged: onChanged,
+              )),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoSection() {
+    return Obx(() => Column(
+      children: [
+        _buildInfoRow('Dosen Wali', controller.dosenWali.value),
+        const SizedBox(height: 8),
+        _buildKreditRow(
+          'Batas / Sisa',
+          controller.batasKredit.value,
+          controller.sisaKredit.value,
+        ),
+        const SizedBox(height: 8),
+        _buildInfoRow('Pengisian', controller.tanggalPengisian.value),
+      ],
+    ));
+  }
+
+  Widget _buildFrsListSection() {
+    return Obx(() => ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: controller.frsList.length,
+      itemBuilder: (context, index) {
+        final frsItem = controller.frsList[index];
+        return Padding(
+          padding: EdgeInsets.only(bottom: Get.height * 0.02),
+          child: _buildFrsCard(
+            frsItem: frsItem,
+            index: index,
+          ),
+        );
+      },
+    ));
+  }
+
+  Widget _buildFloatingActionButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+      child: FloatingActionButton(
+        onPressed: () {
+          Get.toNamed('/frs-memilih');
+        },
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        backgroundColor: const Color(0xFF00509D),
+        child: Icon(
+          PhosphorIcons.plus(PhosphorIconsStyle.regular),
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
   Widget _buildInfoRow(String label, String value) {
-    double width = MediaQuery.of(context).size.width;
     return Row(
       children: [
-        // * Label --------------------------------------------------------------------------
         SizedBox(
-          width: width * 0.25,
+          width: Get.width * 0.25,
           child: Text(label, style: const TextStyle(fontSize: 14)),
         ),
-        Text(':', style: const TextStyle(fontSize: 14)),
+        const Text(':', style: TextStyle(fontSize: 14)),
         const SizedBox(width: 8),
-        // * Value --------------------------------------------------------------------------
         Text(
           value,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -183,39 +171,34 @@ class _FrsViewState extends State<FrsView> {
   }
 
   Widget _buildKreditRow(String label, String batas, String sisa) {
-    double width = MediaQuery.of(context).size.width;
     return Row(
       children: [
-        // * Label --------------------------------------------------------------------------
         SizedBox(
-          width: width * 0.25,
+          width: Get.width * 0.25,
           child: Text(label, style: const TextStyle(fontSize: 14)),
         ),
-        Text(':', style: const TextStyle(fontSize: 14)),
+        const Text(':', style: TextStyle(fontSize: 14)),
         const SizedBox(width: 8),
         RichText(
           text: TextSpan(
-            style: TextStyle(fontSize: 14, color: Colors.black),
+            style: const TextStyle(fontSize: 14, color: Colors.black),
             children: [
-              // * Batas --------------------------------------------------------------------------
-              // TODO: Ganti Warna Batas dan Sisa Dan font dan poop
               TextSpan(
                 text: batas,
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.w500,
                   color: Colors.blue,
                 ),
               ),
               const TextSpan(text: ' / '),
-              // * Sisa --------------------------------------------------------------------------
               TextSpan(
                 text: sisa,
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.w500,
                   color: Colors.yellow,
                 ),
               ),
-              TextSpan(
+              const TextSpan(
                 text: " SKS",
                 style: TextStyle(fontWeight: FontWeight.w500),
               ),
@@ -226,18 +209,10 @@ class _FrsViewState extends State<FrsView> {
     );
   }
 
-  // * FRS Card --------------------------------------------------------------------------
-  // TODO: Ganti warna menggunakan template dan sesuai dengan status, dan ubah font
-  Widget buildFrsCard({
-    required String namaMatakuliah,
-    required String status,
-    required String pengajar,
-    required String waktu,
-    required String kelas,
-    Color statusColor = const Color.fromARGB(255, 183, 40, 40),
+  Widget _buildFrsCard({
+    required frsItem,
+    required int index,
   }) {
-    double width = MediaQuery.of(context).size.width;
-    double height = MediaQuery.of(context).size.height;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -254,21 +229,26 @@ class _FrsViewState extends State<FrsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // * Matakuliah ---------------------------------------------------------------
-          Text(
-            namaMatakuliah,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  frsItem.namaMatakuliah,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
-          // * Status --------------------------------------------------------------------
           Container(
             decoration: BoxDecoration(
-              color: Color.fromARGB(255, 183, 40, 40),
+              color: frsItem.statusColor,
               borderRadius: BorderRadius.circular(20),
             ),
             padding: EdgeInsets.symmetric(
-              horizontal: width * 0.02,
-              vertical: height * 0.005,
+              horizontal: Get.width * 0.02,
+              vertical: Get.height * 0.005,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -280,8 +260,8 @@ class _FrsViewState extends State<FrsView> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Ditolak',
-                  style: TextStyle(
+                  frsItem.status,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Colors.white,
@@ -291,49 +271,35 @@ class _FrsViewState extends State<FrsView> {
             ),
           ),
           const SizedBox(height: 8),
-          // * Pengajar ---------------------------------------------------------------
-          Row(
-            children: [
-              Icon(
-                PhosphorIcons.student(PhosphorIconsStyle.regular),
-                size: 18,
-                color: Colors.black,
-              ),
-              const SizedBox(width: 8),
-              Text(pengajar, style: const TextStyle(fontSize: 14)),
-            ],
+          _buildCardInfoRow(
+            PhosphorIcons.student(PhosphorIconsStyle.regular),
+            frsItem.pengajar,
           ),
           const SizedBox(height: 4),
-          // * Waktu --------------------------------------------------------------------
-          Row(
-            children: [
-              Icon(
-                PhosphorIcons.clock(PhosphorIconsStyle.regular),
-                size: 18,
-                color: Colors.black,
-              ),
-              const SizedBox(width: 8),
-              Text(waktu, style: const TextStyle(fontSize: 14)),
-            ],
+          _buildCardInfoRow(
+            PhosphorIcons.clock(PhosphorIconsStyle.regular),
+            frsItem.waktu,
           ),
           const SizedBox(height: 4),
-          // * Kelas --------------------------------------------------------------------
-          Row(
-            children: [
-              Icon(
-                PhosphorIcons.chalkboardSimple(PhosphorIconsStyle.regular),
-                size: 18,
-                color: Colors.black,
-              ),
-              const SizedBox(width: 8),
-              Text(kelas, style: const TextStyle(fontSize: 14)),
-            ],
+          _buildCardInfoRow(
+            PhosphorIcons.chalkboardSimple(PhosphorIconsStyle.regular),
+            frsItem.kelas,
           ),
         ],
       ),
     );
   }
 
-  DropdownMenuItem<String> buildMenuItem(String item) =>
+  Widget _buildCardInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.black),
+        const SizedBox(width: 8),
+        Text(text, style: const TextStyle(fontSize: 14)),
+      ],
+    );
+  }
+
+  DropdownMenuItem<String> _buildMenuItem(String item) =>
       DropdownMenuItem(value: item, child: Text(item));
 }

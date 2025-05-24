@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 import 'home_controller.dart';
 
 class HomeView extends StatefulWidget {
@@ -43,9 +43,18 @@ class _HomeViewState extends State<HomeView> {
                       Text("3123500038", style: TextStyle(fontSize: 16)),
                     ],
                   ),
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage: AssetImage('assets/profile.png'),
+                  PopupMenuButton(
+                    icon: const Icon(Icons.menu, size: 32,),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 1,
+                        child: Text("Profile"),
+                      ),
+                      const PopupMenuItem(
+                        value: 2,
+                        child: Text("Logout"),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -435,6 +444,7 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
       ),
+      bottomNavigationBar: TaskBottomNavigationBar(),
     );
   }
 }

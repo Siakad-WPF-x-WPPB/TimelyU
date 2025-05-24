@@ -1,30 +1,79 @@
 import 'package:get/get.dart';
-import 'package:timelyu/modules/task/task_binding.dart';
-import 'package:timelyu/modules/task/task_screen.dart';
+import 'package:timelyu/modules/auth/auth_binding.dart';
+import 'package:timelyu/modules/auth/auth_login_view.dart';
+import 'package:timelyu/modules/frs/frs_binding.dart';
+import 'package:timelyu/modules/frs/frs_memilih_binding.dart';
+import 'package:timelyu/modules/frs/frs_memilih_view.dart';
 import 'package:timelyu/modules/frs/frs_view.dart';
+import 'package:timelyu/modules/schedule/full_schedule_view.dart';
+import 'package:timelyu/modules/schedule/schedule_binding.dart';
+import 'package:timelyu/modules/schedule/schedule_view.dart';
+import 'package:timelyu/modules/task/task_binding.dart';
+import 'package:timelyu/modules/task/task_view.dart';
 import './app_routes.dart';
 
-import '../modules/home/home_screen.dart';
+import '../modules/home/home_view.dart';
+import '../modules/home/home_binding.dart' as home;
 
-
-import '../modules/home/home_binding.dart';
 
 class AppPages {
   static final routes = [
     GetPage(
+      name: AppRoutes.login,
+      page: () => LoginScreen(),
+      binding: AuthBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
+    ),
+    
+    // Keep individual routes untuk akses langsung jika diperlukan
+    GetPage(
       name: AppRoutes.home,
       page: () => HomeView(),
-      binding: HomeBinding(),
+      binding: home.HomeBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
     ),
     GetPage(
       name: AppRoutes.root,
-      page: () => HomeView(),
-      binding: HomeBinding(),
+      page: () => LoginScreen(),
+      binding: AuthBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.schedule,
+      page: () => ScheduleView(),
+      binding: ScheduleBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
     ),
     GetPage(
       name: AppRoutes.frs,
       page: () => FrsView(),
+      binding: FrsBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
     ),
-    GetPage(name: AppRoutes.tasks, page: () => TaskScreen(), binding: TaskBinding()),
+    GetPage(
+      name: AppRoutes.tasks,
+      page: () => TaskView(),
+      binding: TaskBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.frsMemilih,
+      page: () => FrsMemilihView(),
+      binding: FrsMemilihBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: AppRoutes.fullSchedule,
+      page: () => FullScheduleView(),
+      transition: Transition.fadeIn,
+      transitionDuration: Duration(milliseconds: 300),
+    ),
   ];
 }
