@@ -142,18 +142,6 @@ class FrsMemilihView extends StatelessWidget {
           _buildBottomSummary(),
         ],
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //     // Sesuai permintaan, FAB ini akan "menuju halaman memilih FRS"
-      //     // Karena kita sudah di halaman memilih FRS, mungkin ini untuk
-      //     // aksi lain atau navigasi spesifik.
-      //     // Untuk contoh ini, kita bisa refresh data atau aksi placeholder.
-      //     controller.fetchCourses(); // Contoh: refresh daftar mata kuliah
-      //     Get.snackbar("Info", "Daftar mata kuliah dimuat ulang.", snackPosition: SnackPosition.TOP);
-      //   },
-      //   backgroundColor: Theme.of(context).primaryColor,
-      //   child: const Icon(Icons.add, color: Colors.white),
-      // ),
     );
   }
 

@@ -1,4 +1,3 @@
-// File: lib/modules/profile/profile_view.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/modules/auth/auth_controller.dart';
@@ -11,7 +10,7 @@ class ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      // backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
           'Profil Saya',
@@ -26,7 +25,7 @@ class ProfileView extends StatelessWidget {
         centerTitle: true,
       ),
       body: Obx(() {
-        if (_authController.isLoading.value) {
+        if (_authController.isLoading.value && _authController.user.value == null) {
           return const Center(
             child: CircularProgressIndicator(
               color: Color(0xFF0056B3),
@@ -48,7 +47,8 @@ class ProfileView extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Data profil tidak tersedia',
+                  _authController.errorMessage.value ?? 'Data profil tidak tersedia.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],
@@ -56,238 +56,246 @@ class ProfileView extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () => _authController.fetchProfile(),
+                  onPressed: () => _authController.fetchProfile(showLoading: true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0056B3),
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Muat Ulang'),
+                  child: const Text('Muat Ulang Profil'),
+                ),
+                 const SizedBox(height: 10),
+                 ElevatedButton(
+                  onPressed: () => _authController.logout(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Login Ulang'),
                 ),
               ],
             ),
           );
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              // Header Profile Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF0056B3),
-                      Color(0xFF003875),
+        return RefreshIndicator( // Tambahkan RefreshIndicator
+          onRefresh: () => _authController.fetchProfile(showLoading: true),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(), // Agar RefreshIndicator selalu aktif
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // Header Profile Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF0056B3),
+                        Color(0xFF003875),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0056B3).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0056B3).withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Avatar
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 2,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 2,
+                          ),
                         ),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Nama
-                    Text(
-                      user.nama,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    // NRP
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        user.nrp ?? '-',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                        child: const Icon(
+                          Icons.person,
+                          size: 40,
                           color: Colors.white,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Informasi Detail
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Informasi Pribadi',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF00296B),
+                      const SizedBox(height: 16),
+                      Text(
+                        user.nama, // Harusnya selalu ada jika user tidak null
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Email
-                    _buildInfoRow(
-                      icon: Icons.email,
-                      label: 'Email',
-                      value: user.email,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // NRP
-                    _buildInfoRow(
-                      icon: Icons.badge,
-                      label: 'NRP',
-                      value: user.nrp ?? '-',
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Program Studi
-                    _buildInfoRow(
-                      icon: Icons.school,
-                      label: 'Program Studi',
-                      value: _getProdiName(user.prodiId),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Kelas
-                    _buildInfoRow(
-                      icon: Icons.class_,
-                      label: 'Kelas',
-                      value: _getKelasName(user.kelasId),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Semester
-                    _buildInfoRow(
-                      icon: Icons.timeline,
-                      label: 'Semester',
-                      value: user.semester != null ? 'Semester ${user.semester}' : '-',
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Tanggal Masuk
-                    _buildInfoRow(
-                      icon: Icons.calendar_today,
-                      label: 'Tanggal Masuk',
-                      value: user.tanggalMasuk != null 
-                          ? _formatDate(user.tanggalMasuk!)
-                          : '-',
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Tombol Logout
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Get.dialog(
-                      AlertDialog(
-                        title: const Text('Konfirmasi Logout'),
-                        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Get.back(),
-                            child: const Text('Batal'),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          user.nrp ?? '-',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
                           ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Get.back();
-                              _authController.logout();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Informasi Detail
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Informasi Pribadi',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF00296B),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildInfoRow(
+                        icon: Icons.email,
+                        label: 'Email',
+                        value: user.email, // Harusnya selalu ada
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        icon: Icons.badge,
+                        label: 'NRP',
+                        value: user.nrp ?? '-',
+                      ),
+                      const SizedBox(height: 16),
+                      // Ini adalah bagian yang menampilkan strip jika namaProdi null
+                      _buildInfoRow(
+                        icon: Icons.school,
+                        label: 'Program Studi',
+                        value: user.namaProdi ?? '-', // TAMPIL STRIP JIKA user.namaProdi == null
+                      ),
+                      const SizedBox(height: 16),
+                      // Ini adalah bagian yang menampilkan strip jika namaKelas null
+                      _buildInfoRow(
+                        icon: Icons.class_,
+                        label: 'Kelas',
+                        value: user.namaKelas ?? '-', // TAMPIL STRIP JIKA user.namaKelas == null
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        icon: Icons.timeline,
+                        label: 'Semester',
+                        value: user.semester != null ? 'Semester ${user.semester}' : '-',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        icon: Icons.calendar_today,
+                        label: 'Tanggal Lahir', // Tambahkan jika ada
+                        value: user.tanggalLahir != null
+                            ? _formatDate(user.tanggalLahir!)
+                            : '-',
+                      ),
+                       const SizedBox(height: 16),
+                      _buildInfoRow(
+                        icon: Icons.event_available,
+                        label: 'Tanggal Masuk',
+                        value: user.tanggalMasuk != null
+                            ? _formatDate(user.tanggalMasuk!)
+                            : '-',
+                      ),
+                      // Tambahkan field lain jika perlu, misal alamat
+                       const SizedBox(height: 16),
+                       _buildInfoRow(
+                        icon: Icons.location_on,
+                        label: 'Alamat',
+                        value: user.alamatJalan ?? '-',
+                       ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Get.dialog(
+                        AlertDialog(
+                          title: const Text('Konfirmasi Logout'),
+                          content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Get.back(),
+                              child: const Text('Batal'),
                             ),
-                            child: const Text('Logout'),
-                          ),
-                        ],
+                            ElevatedButton(
+                              onPressed: () {
+                                Get.back(); // Tutup dialog
+                                _authController.logout(); // Panggil fungsi logout dari controller
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Logout'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.logout),
+                    label: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: const Text(
-                    'Logout',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         );
       }),
@@ -344,47 +352,17 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  String _getProdiName(String? prodiId) {
-    // Anda bisa menambahkan mapping prodi_id ke nama prodi di sini
-    // Atau mengambil dari API jika tersedia
-    if (prodiId == null) return '-';
-    
-    // Contoh mapping (sesuaikan dengan data Anda)
-    final prodiMap = {
-      '1': 'Teknik Informatika',
-      '2': 'Sistem Informasi',
-      '3': 'Teknik Komputer',
-      '4': 'Teknologi Informasi',
-      // Tambahkan mapping lainnya
-    };
-    
-    return prodiMap[prodiId] ?? 'Prodi ID: $prodiId';
-  }
-
-  String _getKelasName(String? kelasId) {
-    // Anda bisa menambahkan mapping kelas_id ke nama kelas di sini
-    // Atau mengambil dari API jika tersedia
-    if (kelasId == null) return '-';
-    
-    // Contoh mapping (sesuaikan dengan data Anda)
-    final kelasMap = {
-      '1': 'Kelas A',
-      '2': 'Kelas B',
-      '3': 'Kelas C',
-      '4': 'Kelas D',
-      // Tambahkan mapping lainnya
-    };
-    
-    return kelasMap[kelasId] ?? 'Kelas ID: $kelasId';
-  }
-
+  // Format tanggal sederhana
   String _formatDate(DateTime date) {
-    // Format tanggal sederhana tanpa menggunakan locale
+    // Anda bisa menggunakan package 'intl' untuk formatting yang lebih baik
+    // import 'package:intl/intl.dart';
+    // return DateFormat('d MMMM yyyy', 'id_ID').format(date);
+    
+    // Implementasi sederhana:
     final months = [
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
-    
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }
