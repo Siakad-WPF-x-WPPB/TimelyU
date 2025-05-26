@@ -1,77 +1,118 @@
+// lib/modules/schedule/full_schedule_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:timelyu/data/models/schedule.dart';
+import 'package:timelyu/data/services/schedule_service.dart';
 
 class FullScheduleController extends GetxController {
+  final ScheduleService _scheduleService = ScheduleService(); // Instantiate the service
+
+  var isLoading = true.obs;
+  var errorMessage = ''.obs;
+
+  // Days for display order
+  var days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].obs; // Added Minggu just in case
+
+  // Schedule data: Key is day name (String), Value is List of schedule items
+  var scheduleData = <String, List<Map<String, dynamic>>>{}.obs;
+
+  // Data for header dropdowns (or static display)
+  var tahunAjarDisplay = ''.obs;
+  var semesterDisplay = ''.obs;
+
+  // Selected day logic (kept from original, may not be used by FullScheduleView directly)
   var selectedDayIndex = 0.obs;
-  var days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].obs;
-  
-  // Updated schedule data to match Figma design
-  var scheduleData = <String, List<Map<String, dynamic>>>{
-    'Senin': [
-      {
-        'waktu': '08:00',
-        'mataKuliah': 'Kecerdasan Buatan',
-        'pengajar': 'Aliridho Barakbah',
-        'jamKuliah': '08:00 - 09:40',
-        'lokasi': 'HH 101',
-        'cardColor': const Color(0xFFE8D5FF),
-      },
-      {
-        'waktu': '13:00',
-        'mataKuliah': 'Workshop Pemrograman Perangkat Bergerak',
-        'pengajar': 'Fadihal Fahrul Hardiansyah',
-        'jamKuliah': '13:00 - 15:30',
-        'lokasi': 'C 206',
-        'cardColor': const Color(0xFFD4F7D4),
-      },
-    ],
-    'Selasa': [
-      {
-        'waktu': '10:30',
-        'mataKuliah': 'Workshop Pemrograman Framework',
-        'pengajar': 'Yanuar Risah Prayogi',
-        'jamKuliah': '10:30 - 13:50',
-        'lokasi': 'C 303',
-        'cardColor': const Color(0xFFFFE4E4),
-      },
-      {
-        'waktu': '13:50',
-        'mataKuliah': 'Workshop Administrasi Jaringan',
-        'pengajar': 'Idris Winarno',
-        'jamKuliah': '13:50 - 16:20',
-        'lokasi': 'C 307',
-        'cardColor': const Color(0xFFE0F2FE),
-      },
-    ],
-    'Rabu': [
-      {
-        'waktu': '08:00',
-        'mataKuliah': 'Workshop Pengembangan Perangkat Lunak berbasis Agile',
-        'pengajar': 'Dr. Budi Santoso',
-        'jamKuliah': '08:00 - 11:30',
-        'lokasi': 'Lab C',
-        'cardColor': const Color(0xFFFFF4E6),
-      },
-    ],
-    'Kamis': <Map<String, dynamic>>[],
-    'Jumat': <Map<String, dynamic>>[],
-    'Sabtu': <Map<String, dynamic>>[],
-  }.obs;
+  String get selectedDayString => days[selectedDayIndex.value];
+  List<Map<String, dynamic>> get todayScheduleFromSelection => scheduleData[selectedDayString] ?? [];
 
   void selectDay(int index) {
-    selectedDayIndex.value = index;
+    if (index >= 0 && index < days.length) {
+      selectedDayIndex.value = index;
+    }
   }
-
-  String get selectedDay => days[selectedDayIndex.value];
-  
-  List<Map<String, dynamic>> get todaySchedule => 
-      scheduleData[selectedDay] ?? [];
 
   @override
   void onInit() {
     super.onInit();
-    // Initialize with Monday (Senin)
-    selectedDayIndex.value = 0;
+    fetchFullSchedule();
+  }
+
+  Future<void> fetchFullSchedule() async {
+    try {
+      isLoading(true);
+      errorMessage('');
+      scheduleData.clear(); // Clear previous data
+
+      ApiResponse<MyFrsResponseModel> apiResponse = await _scheduleService.getMyFrs();
+
+      if (apiResponse.success && apiResponse.data != null) {
+        MyFrsResponseModel frsResponse = apiResponse.data!;
+
+        // Populate header info
+        if (frsResponse.tahunAjar != null) {
+          tahunAjarDisplay.value = frsResponse.tahunAjar!.displayName.split(' ').last; // "2024/2025"
+          semesterDisplay.value = frsResponse.tahunAjar!.semester; // "Genap"
+        } else if (frsResponse.data?.tahunAjar != null) {
+          // Fallback if root tahunAjar is null but nested one exists
+          tahunAjarDisplay.value = "${frsResponse.data!.tahunAjar.tahunMulai}/${frsResponse.data!.tahunAjar.tahunAkhir}";
+          semesterDisplay.value = frsResponse.data!.tahunAjar.semester;
+        }
+        
+        // Initialize scheduleData with empty lists for all displayable days
+        for (String day in days) {
+           scheduleData[day] = [];
+        }
+
+        // Transform and populate schedule data
+        if (frsResponse.data?.details != null) {
+          for (var detail in frsResponse.data!.details) {
+            // Only include approved schedules
+            if (detail.status.toLowerCase() == 'disetujui') {
+              JadwalModel jadwal = detail.jadwal;
+              String dayKey = _normalizeDayName(jadwal.hari);
+
+              // Ensure the day key exists in our map
+              if (!scheduleData.containsKey(dayKey)) {
+                scheduleData[dayKey] = [];
+              }
+              
+              scheduleData[dayKey]!.add({
+                'waktu': jadwal.jamMulai.substring(0, 5), // HH:MM
+                'mataKuliah': jadwal.matakuliah.nama,
+                'pengajar': jadwal.dosen.nama,
+                'jamKuliah': '${jadwal.jamMulai.substring(0, 5)} - ${jadwal.jamSelesai.substring(0, 5)}',
+                'lokasi': jadwal.ruangan.kode, // Or jadwal.ruangan.nama
+                // 'cardColor' will be handled by the view's switch statement
+              });
+            }
+          }
+          // Sort schedules by start time for each day
+          scheduleData.forEach((day, schedules) {
+            schedules.sort((a, b) => (a['waktu'] as String).compareTo(b['waktu'] as String));
+          });
+        }
+         // Trigger update for the observable map
+        scheduleData.refresh();
+
+      } else {
+        errorMessage(apiResponse.message ?? 'Gagal memuat jadwal.');
+      }
+    } catch (e) {
+      print('Error in fetchFullSchedule: $e');
+      errorMessage('Terjadi kesalahan: ${e.toString()}');
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  String _normalizeDayName(String apiDayName) {
+    // API: "Jumat", "Rabu", "Selasa"
+    // Controller days: "Senin", "Selasa", ...
+    // This assumes API day names match the controller's day names in terms of capitalization and spelling.
+    // If not, add mapping logic here.
+    // For example, if API returns "senin" but controller uses "Senin":
+    // if (apiDayName.toLowerCase() == 'senin') return 'Senin';
+    return apiDayName;
   }
 
   @override

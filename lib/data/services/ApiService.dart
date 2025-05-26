@@ -28,7 +28,7 @@ class ApiResponse<T> {
 
 class ApiService {
   // PASTIKAN BASE URL INI SUDAH BENAR DAN DAPAT DIAKSES
-  static const String _baseUrl = "http://192.168.183.246:8000/api/mahasiswa";
+  static const String _baseUrl = "http://192.168.68.200:8000/api/mahasiswa";
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
 

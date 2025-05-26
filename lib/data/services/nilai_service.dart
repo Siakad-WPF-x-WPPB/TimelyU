@@ -47,7 +47,7 @@ class ApiResponse<T> {
 
 // Layanan untuk mengelola nilai
 class NilaiService {
-  static const String _baseUrl = "http://192.168.183.246:8000/api/mahasiswa";
+  static const String _baseUrl = "http://192.168.68.200:8000/api/mahasiswa";
   static const String _tokenKey = 'auth_token';
 
   // Method untuk mendapatkan token dari SharedPreferences

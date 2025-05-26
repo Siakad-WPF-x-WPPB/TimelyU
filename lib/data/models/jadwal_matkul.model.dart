@@ -9,8 +9,6 @@ class JadwalMatakuliahModel {
   final String ruangan;
   final String namaDosen;
   final String kelas;
-  // Anda bisa menambahkan field lain seperti 'sks', 'kode_matakuliah' jika API menyediakannya
-  // dan Anda membutuhkannya di UI. Berdasarkan JSON yang diberikan, field-field ini tidak ada.
 
   JadwalMatakuliahModel({
     required this.idJadwal,

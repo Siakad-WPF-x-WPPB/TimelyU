@@ -51,7 +51,7 @@ class ApiResponse<T> {
 // --- Layanan untuk FRS ---
 class FrsService {
   // Ganti dengan IP address dan port backend Anda yang sebenarnya
-  static const String _baseUrl = "http://192.168.183.246:8000/api/mahasiswa";
+  static const String _baseUrl = "http://192.168.68.200:8000/api/mahasiswa";
   static const String _tokenKey = 'auth_token';
 
   Future<String?> _getToken() async {
@@ -147,7 +147,7 @@ class FrsService {
         queryParameters['tahun_akhir'] = tahunData['tahun_berakhir'].toString();
       }
 
-      final uri = Uri.parse('$_baseUrl/jadwal/program-studi').replace(queryParameters: queryParameters);
+      final uri = Uri.parse('$_baseUrl/jadwal/available-for-frs').replace(queryParameters: queryParameters);
       print("FrsService (getJadwalPilihan): Calling URL - $uri");
       final response = await http.get(uri, headers: _getHeaders(requiresAuth: true, token: token));
       print("FrsService (getJadwalPilihan): Response Status - ${response.statusCode}");

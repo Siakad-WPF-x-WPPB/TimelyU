@@ -1,186 +1,143 @@
-// import 'dart:convert';
-// import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-// import 'package:http/http.dart' as http;
-// import 'package:timelyu/data/models/schedule.dart';
+import 'dart:convert';
+import 'dart:async'; // Untuk TimeoutException
+import 'dart:io';   // Untuk SocketException, HttpException, dan HttpStatus
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timelyu/data/models/schedule.dart';
 
-// class ScheduleService {
-//   static const baseUrl = 'http://192.168.183.246:8000/api/mahasiswa';
-//   final FlutterSecureStorage storage;
-  
-//   ScheduleService({FlutterSecureStorage? secureStorage}) 
-//       : storage = secureStorage ?? const FlutterSecureStorage();
 
-//   /// Mengambil token autentikasi dari secure storage
-//   Future<String?> getToken() async {
-//     try {
-//       final token = await storage.read(key: 'auth_token');
-//       print('🔑 Token retrieved: ${token != null ? 'Found' : 'Not found'}');
-//       return token;
-//     } catch (e) {
-//       print('❌ Error getting token: $e');
-//       return null;
-//     }
-//   }
+class ApiResponse<T> {
+  final bool success;
+  final String? message;
+  final T? data;
+  final int? statusCode;
+  final Map<String, dynamic>? validationErrors;
 
-//   /// Header umum untuk request API
-//   Future<Map<String, String>> _getHeaders() async {
-//     final token = await getToken();
-    
-//     if (token == null || token.isEmpty) {
-//       print('⚠️ Warning: No auth token found');
-//       throw Exception('Token autentikasi tidak ditemukan. Silakan login ulang.');
-//     }
-    
-//     return {
-//       'Authorization': 'Bearer $token',
-//       'Accept': 'application/json',
-//       'Content-Type': 'application/json',
-//     };
-//   }
+  ApiResponse({
+    required this.success,
+    this.message,
+    this.data,
+    this.statusCode,
+    this.validationErrors,
+  });
 
-//   /// Test koneksi dan token
-//   Future<bool> testConnection() async {
-//     try {
-//       final headers = await _getHeaders();
-//       final response = await http.get(
-//         Uri.parse('$baseUrl/profile'), // Endpoint untuk test auth
-//         headers: headers,
-//       ).timeout(const Duration(seconds: 10));
-      
-//       print('🌐 Test connection status: ${response.statusCode}');
-//       return response.statusCode == 200;
-//     } catch (e) {
-//       print('❌ Connection test failed: $e');
-//       return false;
-//     }
-//   }
+  factory ApiResponse.success(T data, {String? message, int? statusCode = HttpStatus.ok}) =>
+      ApiResponse(
+        success: true,
+        data: data,
+        message: message,
+        statusCode: statusCode,
+        validationErrors: null,
+      );
 
-//   /// Mengambil semua jadwal kuliah
-//   Future<List<Schedule>> fetchAllSchedule() async {
-//     try {
-//       final headers = await _getHeaders();
-//       print('📡 Fetching all schedules...');
-      
-//       final response = await http.get(
-//         Uri.parse('$baseUrl/jadwal'),
-//         headers: headers,
-//       ).timeout(const Duration(seconds: 15));
+  factory ApiResponse.error(
+    String message, {
+    int? statusCode,
+    T? data,
+    Map<String, dynamic>? validationErrors,
+  }) =>
+      ApiResponse(
+        success: false,
+        message: message,
+        statusCode: statusCode,
+        data: data,
+        validationErrors: validationErrors,
+      );
+}
 
-//       print('📋 All schedule response status: ${response.statusCode}');
-//       print('📋 All schedule response body: ${response.body}');
+class ScheduleService {
+  // Sesuaikan IP Address ini jika server Anda berbeda atau jika menggunakan emulator
+  // Untuk Android emulator, '10.0.2.2' biasanya merujuk ke localhost mesin host.
+  // '127.0.0.1' untuk iOS simulator jika server berjalan di mesin yang sama.
+  static const String _baseUrl = "http://192.168.68.200:8000/api/mahasiswa";
+  static const String _tokenKey = "auth_token";
 
-//       if (response.statusCode == 401) {
-//         throw Exception('Token tidak valid. Silakan login ulang.');
-//       }
+  Future<String?> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
 
-//       if (response.statusCode == 200) {
-//         final data = json.decode(response.body);
-//         return _parseScheduleResponse(data);
-//       } else {
-//         throw Exception('Server error: ${response.statusCode} - ${response.body}');
-//       }
-//     } catch (e) {
-//       print('❌ Error fetching all schedule: $e');
-//       rethrow;
-//     }
-//   }
+  Map<String, String> _getHeaders({bool requiresAuth = false, String? token}) {
+    Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (requiresAuth && token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
 
-//   /// Mengambil jadwal kuliah hari ini
-//   Future<List<Schedule>> fetchTodaySchedule() async {
-//     try {
-//       final headers = await _getHeaders();
-//       print('📡 Fetching today schedule...');
-      
-//       final response = await http.get(
-//         Uri.parse('$baseUrl/jadwal/hari-ini'),
-//         headers: headers,
-//       ).timeout(const Duration(seconds: 15));
+  Future<ApiResponse<MyFrsResponseModel>> getMyFrs() async {
+    try {
+      final token = await _getToken();
+      if (token == null || token.isEmpty) {
+        return ApiResponse.error(
+          "Autentikasi gagal: Token tidak ditemukan.",
+          statusCode: HttpStatus.unauthorized,
+        );
+      }
 
-//       print('📅 Today schedule response status: ${response.statusCode}');
-//       print('📅 Today schedule response body: ${response.body}');
+      final response = await http.get(
+        Uri.parse('$_baseUrl/frs/my-frs'),
+        headers: _getHeaders(requiresAuth: true, token: token),
+      ).timeout(const Duration(seconds: 20));
 
-//       if (response.statusCode == 401) {
-//         throw Exception('Token tidak valid. Silakan login ulang.');
-//       }
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
 
-//       if (response.statusCode == 200) {
-//         final data = json.decode(response.body);
-//         return _parseScheduleResponse(data);
-//       } else {
-//         throw Exception('Server error: ${response.statusCode} - ${response.body}');
-//       }
-//     } catch (e) {
-//       print('❌ Error fetching today schedule: $e');
-//       rethrow;
-//     }
-//   }
-
-//   /// Mengambil jadwal kuliah mendatang
-//   Future<List<Schedule>> fetchUpcomingSchedule() async {
-//     try {
-//       final headers = await _getHeaders();
-//       print('📡 Fetching upcoming schedule...');
-      
-//       final response = await http.get(
-//         Uri.parse('$baseUrl/jadwal/mendatang'),
-//         headers: headers,
-//       ).timeout(const Duration(seconds: 15));
-
-//       print('⏰ Upcoming schedule response status: ${response.statusCode}');
-//       print('⏰ Upcoming schedule response body: ${response.body}');
-
-//       if (response.statusCode == 401) {
-//         throw Exception('Token tidak valid. Silakan login ulang.');
-//       }
-
-//       if (response.statusCode == 200) {
-//         final data = json.decode(response.body);
-//         return _parseScheduleResponse(data);
-//       } else {
-//         throw Exception('Server error: ${response.statusCode} - ${response.body}');
-//       }
-//     } catch (e) {
-//       print('❌ Error fetching upcoming schedule: $e');
-//       rethrow;
-//     }
-//   }
-
-//   /// Helper untuk parsing response schedule
-//   List<Schedule> _parseScheduleResponse(dynamic data) {
-//     try {
-//       List<dynamic> scheduleList;
-      
-//       if (data is List) {
-//         scheduleList = data;
-//       } else if (data is Map && data.containsKey('data')) {
-//         scheduleList = data['data'] as List;
-//       } else if (data is Map && data.containsKey('jadwal')) {
-//         scheduleList = data['jadwal'] as List;
-//       } else {
-//         print('❌ Unexpected response format: $data');
-//         throw Exception('Format response tidak sesuai');
-//       }
-      
-//       print('📊 Parsing ${scheduleList.length} schedule items');
-      
-//       return scheduleList.map((item) {
-//         try {
-//           return Schedule.fromJson(item as Map<String, dynamic>);
-//         } catch (e) {
-//           print('❌ Error parsing schedule item: $item, Error: $e');
-//           rethrow;
-//         }
-//       }).toList();
-      
-//     } catch (e) {
-//       print('❌ Error in _parseScheduleResponse: $e');
-//       rethrow;
-//     }
-//   }
-
-//   /// Clear token (untuk logout)
-//   Future<void> clearToken() async {
-//     await storage.delete(key: 'auth_token');
-//     print('🗑️ Auth token cleared');
-//   }
-// }
+      if (response.statusCode == HttpStatus.ok) {
+        final myFrsData = MyFrsResponseModel.fromJson(responseData);
+        
+        if (myFrsData.success) {
+          if (myFrsData.data != null) { // Memastikan data utama ada jika sukses true
+              return ApiResponse.success(myFrsData, message: responseData['message'] as String? ?? "Data FRS berhasil diambil.");
+          } else {
+              // Kasus success true tapi data utama (payload) null
+              return ApiResponse.error(
+                responseData['message'] as String? ?? "Data FRS tidak ditemukan meskipun respons sukses.",
+                statusCode: response.statusCode,
+              );
+          }
+        } else {
+          // Jika API mengembalikan success: false di body JSON (tapi status code mungkin 200 OK)
+          return ApiResponse.error(
+            responseData['message'] as String? ?? "Gagal mengambil data FRS dari server.",
+            statusCode: response.statusCode, // Bisa jadi 200 OK tapi success: false
+            validationErrors: responseData.containsKey('errors') ? responseData['errors'] as Map<String, dynamic> : null,
+          );
+        }
+      } else {
+        // Gagal mendapatkan data (status code bukan 200 OK)
+        String errorMessage = "Gagal mengambil data FRS.";
+        Map<String, dynamic>? validationErrors;
+        // responseData sudah di-decode di atas, bisa langsung digunakan
+        if (responseData.containsKey('message') && responseData['message'] is String) {
+          errorMessage = responseData['message'];
+        }
+        if (responseData.containsKey('errors') && responseData['errors'] is Map) {
+          validationErrors = responseData['errors'] as Map<String, dynamic>;
+        }
+        return ApiResponse.error(
+          errorMessage,
+          statusCode: response.statusCode,
+          validationErrors: validationErrors,
+        );
+      }
+    } on SocketException {
+      return ApiResponse.error(
+        "Kesalahan jaringan: Tidak dapat terhubung ke server.",
+        statusCode: HttpStatus.serviceUnavailable, // Kode status buatan untuk identifikasi
+      );
+    } on HttpException catch(e) {
+        print('HttpException di getMyFrs: ${e.message}');
+        return ApiResponse.error("Kesalahan koneksi HTTP: ${e.message}");
+    } on FormatException {
+      return ApiResponse.error("Kesalahan format data: Respons dari server tidak valid.");
+    } on TimeoutException {
+        return ApiResponse.error("Kesalahan: Waktu tunggu koneksi ke server habis.");
+    } catch (e) {
+      print('Error tidak terduga di getMyFrs: $e');
+      return ApiResponse.error("Terjadi kesalahan yang tidak terduga: ${e.toString()}");
+    }
+  }
+}

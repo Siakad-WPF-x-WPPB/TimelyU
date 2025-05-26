@@ -2,7 +2,7 @@
 
 class FrsModel {
   final String id; // ID unik untuk item FRS ini
-  final String? idJadwalAsal; // ID dari JadwalMatakuliahModel asli
+  final String? idJadwalAsal;
   final String status;
   final String hari;
   final String jamMulai;
