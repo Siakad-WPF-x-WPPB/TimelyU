@@ -77,7 +77,7 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.frsMemilih,
-      page: () => FrsMemilihView(),
+      page: () => FrsInputView(),
       binding: FrsMemilihBinding(),
       transition: Transition.fadeIn,
       transitionDuration: Duration(milliseconds: 300),

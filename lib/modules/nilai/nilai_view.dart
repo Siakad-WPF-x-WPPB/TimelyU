@@ -8,148 +8,70 @@ class NilaiView extends GetView<NilaiController> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        elevation: 0.5,
         centerTitle: true,
         title: const Text(
           'Nilai Per Semester',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.w500, color: Colors.black87),
         ),
       ),
       body: Column(
         children: [
           // Filter Section
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: Colors.white,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    // Tahun Ajaran Dropdown
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Tahun Ajaran',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Obx(
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey[300]!),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: controller.selectedTahunAjaran.value,
-                                  isExpanded: true,
-                                  items:
-                                      controller.tahunAjaranList.map((
-                                        String value,
-                                      ) {
-                                        return DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(value),
-                                        );
-                                      }).toList(),
-                                  onChanged: (String? newValue) {
-                                    if (newValue != null) {
-                                      controller.updateTahunAjaran(newValue);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Semester Dropdown
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Semester',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Obx(
-                            () => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey[300]!),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: controller.selectedSemester.value,
-                                  isExpanded: true,
-                                  items:
-                                      controller.semesterList.map((
-                                        String value,
-                                      ) {
-                                        return DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(value),
-                                        );
-                                      }).toList(),
-                                  onChanged: (String? newValue) {
-                                    if (newValue != null) {
-                                      controller.updateSemester(newValue);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _buildFilterSection(),
           const SizedBox(height: 8),
           // Mata Kuliah List
           Expanded(
-            child: Obx(
-              () => ListView.builder(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (controller.errorMessage.value != null) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      controller.errorMessage.value!,
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              }
+              if (controller.displayedNilaiList.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'Tidak ada data nilai untuk filter yang dipilih.',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                );
+              }
+              return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: controller.mataKuliahList.length,
+                itemCount: controller.displayedNilaiList.length,
                 itemBuilder: (context, index) {
-                  final mataKuliah = controller.mataKuliahList[index];
+                  final nilaiItem = controller.displayedNilaiList[index];
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
+                    margin: const EdgeInsets.only(bottom: 12), // Sedikit lebih banyak spasi
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
+                          color: Colors.grey.withOpacity(0.2), // Shadow lebih halus
                           spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
@@ -158,131 +80,166 @@ class NilaiView extends GetView<NilaiController> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Mata Kuliah Row
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(
-                                width: 100,
-                                child: Text(
-                                  'Mata Kuliah',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              const Text(
-                                ': ',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  mataKuliah['nama']!,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Kode MK Row
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(
-                                width: 100,
-                                child: Text(
-                                  'Kode MK',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              const Text(
-                                ': ',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  mataKuliah['kode']!,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Nilai Row
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(
-                                width: 100,
-                                child: Text(
-                                  'Nilai',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              const Text(
-                                ': ',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => controller.isiKuesioner(index),
-                                  child: Text(
-                                    mataKuliah['nilai']!,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: mataKuliah['nilai'] ==
-                                              'Belum Isi Kuesioner'
-                                          ? Colors.orange[700]
-                                          : Colors.green[700],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          _buildNilaiRow('Mata Kuliah', nilaiItem.matakuliah),
+                          const SizedBox(height: 8),
+                          _buildNilaiRow('Kode MK', nilaiItem.kodemk),
+                          const SizedBox(height: 8),
+                          _buildNilaiRow('Nilai Angka', nilaiItem.nilaiAngka.toString()),
+                          const SizedBox(height: 8),
+                          _buildNilaiRow('Nilai Huruf', nilaiItem.nilaiHuruf),
+                          // Jika ingin menampilkan status & semester (jika ditambahkan ke model)
+                          // const SizedBox(height: 8),
+                          // _buildNilaiRow('Status', nilaiItem.status),
+                          // const SizedBox(height: 8),
+                          // _buildNilaiRow('Semester', nilaiItem.semester),
                         ],
                       ),
                     ),
                   );
                 },
-              ),
-            ),
+              );
+            }),
           ),
         ],
       ),
-      bottomNavigationBar: TaskBottomNavigationBar(),
+      bottomNavigationBar: TaskBottomNavigationBar(), // Pastikan widget ini ada dan path benar
+    );
+  }
+
+  Widget _buildFilterSection() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      color: Colors.white, // Atau sedikit berbeda untuk memisahkan dari list
+      // Bisa ditambahkan shadow jika diinginkan
+      // decoration: BoxDecoration(
+      //   color: Colors.white,
+      //   boxShadow: [
+      //     BoxShadow(
+      //       color: Colors.grey.withOpacity(0.1),
+      //       spreadRadius: 1,
+      //       blurRadius: 3,
+      //       offset: Offset(0, 1),
+      //     ),
+      //   ],
+      // ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Tahun Ajaran Dropdown
+              Expanded(
+                child: _buildDropdown(
+                  label: 'Tahun Ajaran',
+                  value: controller.selectedTahunAjaran,
+                  items: controller.tahunAjaranList,
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.updateTahunAjaran(value);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Semester Dropdown
+              Expanded(
+                child: _buildDropdown(
+                  label: 'Semester',
+                  value: controller.selectedSemester,
+                  items: controller.semesterList,
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.updateSemester(value);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required RxString value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15, // Sedikit lebih kecil
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Obx(
+          () => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // Sesuaikan padding vertikal
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[350]!), // Border lebih jelas
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value.value,
+                isExpanded: true,
+                icon: Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
+                items: items.map((String itemValue) {
+                  return DropdownMenuItem<String>(
+                    value: itemValue,
+                    child: Text(itemValue, style: const TextStyle(fontSize: 14)),
+                  );
+                }).toList(),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNilaiRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100, // Lebar label konsisten
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black54, // Warna label lebih soft
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Text(
+          ': ',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.black54,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+              // fontWeight: FontWeight.w500, // Bisa ditambahkan jika ingin nilai lebih tebal
+            ),
+            textAlign: TextAlign.left, // Ubah ke left jika lebih sesuai
+          ),
+        ),
+      ],
     );
   }
 }

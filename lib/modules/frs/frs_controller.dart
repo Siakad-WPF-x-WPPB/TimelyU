@@ -1,336 +1,318 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/data/models/frs_model.dart';
-import 'package:timelyu/data/models/pemilihan_frs_model.dart';
+// Pastikan nama file model jadwal sudah benar (jadwal_matakuliah_model.dart)
+import 'package:timelyu/data/models/jadwal_matkul.model.dart'; 
+import 'package:timelyu/data/services/frs_service.dart';
 
 class FrsController extends GetxController {
-  // Observable variables
-  final items = ['Item 1', 'Item 2', 'Item 3', 'Item 4'].obs;
-  final selectedTahunAjar = Rxn<String>();
-  final selectedSemester = Rxn<String>();
+  late final FrsService _frsService;
 
-  // Sample FRS data
+  // --- State untuk Menampilkan FRS yang Sudah Ada ---
+  final isLoadingFrs = false.obs;
   final frsList = <FrsModel>[].obs;
 
-  // Info data
-  final dosenWali = 'S.kom Jakobowo'.obs;
-  final batasKredit = '24'.obs;
-  final sisaKredit = '20'.obs;
-  final tanggalPengisian = '07-08-2023'.obs;
+  // --- State untuk Pemilihan Jadwal FRS Baru ---
+  final isLoadingJadwalPilihan = false.obs;
+  // _rawJadwalPilihanList menyimpan data asli dari API sebelum difilter lebih lanjut
+  final RxList<JadwalMatakuliahModel> _rawJadwalPilihanList = <JadwalMatakuliahModel>[].obs;
+  // jadwalPilihanList adalah yang akan diobservasi oleh UI, berisi data yang sudah difilter
+  final jadwalPilihanList = <JadwalMatakuliahModel>[].obs; 
+  final selectedJadwalUntukPengajuan = <JadwalMatakuliahModel>[].obs;
+  final isStoringFrs = false.obs;
+  final RxString searchQuery = ''.obs;
+  // Menyimpan idJadwalAsal dari FRS yang sudah diambil (status pending/approved) pada periode terpilih
+  final RxList<String> _idsJadwalFrsDiambilPadaPeriodeIni = <String>[].obs; 
 
-  // Total sks yang diambil
-  final int maxSKS = 24;
+  // --- State Umum & Filter ---
+  final selectedTahunAjar = Rxn<String>(); // Format "YYYY/YYYY"
+  final selectedSemester = Rxn<String>();
+  // Pastikan tahunAjarItems dan semesterItems diisi dengan data yang relevan
+  final tahunAjarItems = <String>['2024/2025', '2023/2024', '2022/2023', '2021/2022','2020/2021', '2019/2020'].obs;
+  final semesterItems = <String>['Genap', 'Ganjil'].obs;
 
-  // Daftar mata kuliah yang tersedia
-  var pemilihanFRS = <PemilihanFrsModel>[].obs;
+  // --- Info Tambahan Mahasiswa (Contoh) ---
+  final dosenWali = 'Dr. S.Kom Jakobowo, M.Kom'.obs; // Contoh data
+  final tanggalPengisian = ''.obs; // Bisa diisi dari data profil atau tanggal saat ini
 
-  // SKS yang sudah dipilih
-  var selectedSKS = 0.obs;
+  // Helper untuk parsing tahun ajar di controller
+  int? _getStartYearFromTahunAjarString(String? tahunAjarStr) {
+    if (tahunAjarStr == null) return null;
+    try {
+      List<String> parts = tahunAjarStr.split('/');
+      if (parts.length == 2) {
+        return int.parse(parts[0]);
+      }
+    } catch (e) {
+      print("Error parsing tahun ajar string in controller '$tahunAjarStr': $e");
+    }
+    return null;
+  }
 
-  // Sisa SKS yang bisa dipilih
-  int get remainingSKS => maxSKS - selectedSKS.value;
+  // Getter untuk list jadwal yang sudah difilter berdasarkan pencarian DAN FRS yang sudah diambil
+  List<JadwalMatakuliahModel> get filteredJadwalPilihanList {
+    // 1. Filter berdasarkan FRS yang sudah diambil pada periode ini
+    List<JadwalMatakuliahModel> listSetelahFilterFrs = _rawJadwalPilihanList.where((jadwal) {
+      return !_idsJadwalFrsDiambilPadaPeriodeIni.contains(jadwal.idJadwal);
+    }).toList();
+
+    // 2. Filter berdasarkan query pencarian
+    if (searchQuery.value.isEmpty) {
+      return listSetelahFilterFrs;
+    }
+    return listSetelahFilterFrs.where((jadwal) {
+      final query = searchQuery.value.toLowerCase();
+      // Pencarian berdasarkan nama mata kuliah dan nama dosen
+      return jadwal.namaMatakuliah.toLowerCase().contains(query) ||
+             jadwal.namaDosen.toLowerCase().contains(query);
+    }).toList();
+  }
 
   @override
   void onInit() {
     super.onInit();
-    _loadInitialData();
-    fetchCourses();
+    _initializeService();
+    _loadInitialData(); // Memuat data awal saat controller diinisialisasi
   }
 
-  // data contoh dalam pengambilan API
-  void fetchCourses() {
-    // Data contoh, dalam aplikasi nyata data ini bisa berasal dari API
-    var coursesData = [
-      PemilihanFrsModel(
-        id: '1',
-        nama: 'MW-Bahasa Inggris',
-        sks: 2,
-        dosen: 'Adolf Ismaran S.kom',
-        jadwal: '08:00 sd 11:00 WIB',
-        kelas: 'Kelas B',
-      ),
-      PemilihanFrsModel(
-        id: '2',
-        nama: 'MW-Workshop Pemrograman Perangkat Bergerak',
-        sks: 2,
-        dosen: 'Adolf Ismaran S.kom',
-        jadwal: '12:00 sd 14:30 WIB',
-        kelas: 'Kelas B',
-      ),
-      PemilihanFrsModel(
-        id: '3',
-        nama: 'MW-Dasar Sistem Informasi',
-        sks: 2,
-        dosen: 'Adolf Ismaran S.kom',
-        jadwal: 'TBA', // To Be Announced
-        kelas: 'Kelas A',
-      ),
-      PemilihanFrsModel(
-        id: '4',
-        nama: 'Kalkulus Lanjut',
-        sks: 3,
-        dosen: 'Dr. Supriadi, M.Si.',
-        jadwal: 'Senin, 10:00-12:30 WIB',
-        kelas: 'Kelas C',
-      ),
-      PemilihanFrsModel(
-        id: '5',
-        nama: 'Struktur Data dan Algoritma',
-        sks: 4,
-        dosen: 'Prof. Budi Santoso, Ph.D',
-        jadwal: 'Selasa, 13:00-15:40 WIB',
-        kelas: 'Kelas D',
-      ),
-    ];
-    pemilihanFRS.assignAll(coursesData);
-  }
-
-  void toggleCourseSelection(PemilihanFrsModel frs) {
-    if (frs.isSelected.value) {
-      // Jika sudah dipilih (deselect)
-      frs.isSelected.value = false;
-      selectedSKS.value -= frs.sks;
-    } else {
-      // Jika belum dipilih (select)
-      if (selectedSKS.value + frs.sks <= maxSKS) {
-        frs.isSelected.value = true;
-        selectedSKS.value += frs.sks;
-      } else {
-        // Tampilkan pesan jika melebihi batas SKS
-        Get.snackbar(
-          'Batas SKS Terlampaui',
-          'Anda tidak dapat memilih mata kuliah ini karena akan melebihi batas SKS.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      }
-    }
-  }
-
-  void submitFRS() {
-    // Logika untuk submit FRS yang dipilih
-    List<PemilihanFrsModel> chosenCourses =
-        pemilihanFRS.where((c) => c.isSelected.value).toList();
-
-    if (chosenCourses.isEmpty) {
-      Get.snackbar(
-        'Belum Ada Pilihan',
-        'Silakan pilih minimal satu mata kuliah.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    // Custom dialog yang sesuai dengan tampilan
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: Get.width * 0.85, // 85% dari lebar layar
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header dengan ikon close
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 24), // Spacer
-                  const Text(
-                    'Pemilihan FRS',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => Get.back(),
-                    child: const Icon(
-                      Icons.close,
-                      size: 24,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Pesan konfirmasi
-              const Text(
-                'Apakah anda yakin ingin\nmenambahkan FRS berikut?',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                  height: 1.4,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // List mata kuliah yang dipilih
-              Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(
-                  maxHeight: 200, // Maksimal tinggi untuk scroll
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children:
-                        chosenCourses.asMap().entries.map((entry) {
-                          int index = entry.key + 1;
-                          PemilihanFrsModel course = entry.value;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$index. ',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    '${course.nama} (${course.sks} SKS)',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              // Tombol aksi
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Get.back(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Tidak',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        Get.snackbar(
-                          'Berhasil',
-                          'FRS telah berhasil diambil.',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.green,
-                          colorText: Colors.white,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Iya',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: true,
-    );
-
-    print("Mata kuliah yang dipilih:");
-    for (var course in chosenCourses) {
-      print("- ${course.nama} (${course.sks} SKS)");
-    }
+  void _initializeService() {
+    _frsService = Get.put(FrsService()); 
   }
 
   void _loadInitialData() {
-    frsList.add(
-      FrsModel(
-        namaMatakuliah: "Adolf Ismaran S.kom",
-        status: "Ditolak",
-        pengajar: "Adolf Ismaran S.kom",
-        waktu: "08:00 sd 11:00 WIB",
-        kelas: "Kelas B",
-      ),
-    );
+    if (tahunAjarItems.isNotEmpty && selectedTahunAjar.value == null) {
+      selectedTahunAjar.value = tahunAjarItems.first;
+    }
+    if (semesterItems.isNotEmpty && selectedSemester.value == null) {
+      selectedSemester.value = semesterItems.first;
+    }
+    _refreshData();
   }
 
-  // Methods
+  Future<void> _refreshData() async {
+    if (selectedTahunAjar.value != null && selectedSemester.value != null) {
+      await fetchFrsData(); 
+      await fetchJadwalPilihan(); 
+    } else {
+      frsList.clear(); 
+      _rawJadwalPilihanList.clear();
+      jadwalPilihanList.clear();
+      selectedJadwalUntukPengajuan.clear();
+      _idsJadwalFrsDiambilPadaPeriodeIni.clear();
+    }
+  }
+
+  Future<void> fetchFrsData() async {
+    if (selectedTahunAjar.value == null || selectedSemester.value == null) {
+      frsList.clear();
+      _idsJadwalFrsDiambilPadaPeriodeIni.clear();
+      return;
+    }
+    
+    isLoadingFrs.value = true;
+    try {
+      final apiResponse = await _frsService.getFrsData(
+        tahunAjar: selectedTahunAjar.value!,
+        semester: selectedSemester.value!,
+      );
+      
+      if (apiResponse.success && apiResponse.data != null) {
+        frsList.assignAll(apiResponse.data!);
+        
+        final int? currentStartYear = _getStartYearFromTahunAjarString(selectedTahunAjar.value);
+        final String? currentSemester = selectedSemester.value?.toLowerCase();
+
+        if (currentStartYear != null && currentSemester != null) {
+          _idsJadwalFrsDiambilPadaPeriodeIni.assignAll(
+            frsList
+                .where((frs) => 
+                    (frs.status.toLowerCase() == 'pending' || 
+                     frs.status.toLowerCase() == 'approved' || 
+                     frs.status.toLowerCase() == 'disetujui') &&
+                    frs.idJadwalAsal != null && frs.idJadwalAsal!.isNotEmpty &&
+                    frs.tahunAjar == currentStartYear && // Perbandingan dengan tahunAjar yang diparsing
+                    frs.semester.toLowerCase() == currentSemester
+                )
+                .map((frs) => frs.idJadwalAsal!)
+                .toSet() 
+                .toList()
+          );
+        } else {
+          _idsJadwalFrsDiambilPadaPeriodeIni.clear();
+        }
+      } else {
+        frsList.clear();
+        _idsJadwalFrsDiambilPadaPeriodeIni.clear();
+      }
+    } catch (e) {
+      frsList.clear();
+      _idsJadwalFrsDiambilPadaPeriodeIni.clear();
+      print("Controller Exception in fetchFrsData: $e");
+    } finally {
+      isLoadingFrs.value = false;
+      _updateFilteredJadwalList();
+    }
+  }
+
+  Future<void> fetchJadwalPilihan() async {
+    if (selectedTahunAjar.value == null || selectedSemester.value == null) {
+      _rawJadwalPilihanList.clear();
+      jadwalPilihanList.clear();
+      return;
+    }
+
+    isLoadingJadwalPilihan.value = true;
+    try {
+      final apiResponse = await _frsService.getJadwalPilihan(
+        tahunAjar: selectedTahunAjar.value!,
+        semester: selectedSemester.value!,
+      );
+
+      if (apiResponse.success && apiResponse.data != null) {
+        _rawJadwalPilihanList.assignAll(apiResponse.data!);
+        _updateFilteredJadwalList(); 
+      } else {
+        _rawJadwalPilihanList.clear();
+        jadwalPilihanList.clear();
+         Get.snackbar(
+          'Error Memuat Jadwal',
+          apiResponse.message ?? 'Terjadi kesalahan saat memuat jadwal pilihan.',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange, colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      _rawJadwalPilihanList.clear();
+      jadwalPilihanList.clear();
+      print("Controller Exception in fetchJadwalPilihan: $e");
+      Get.snackbar('Error Kritis Jadwal', 'Terjadi pengecualian: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange, colorText: Colors.white);
+    } finally {
+      isLoadingJadwalPilihan.value = false;
+    }
+  }
+  
+  void _updateFilteredJadwalList() {
+    jadwalPilihanList.assignAll(filteredJadwalPilihanList);
+  }
+
   void onTahunAjarChanged(String? value) {
-    selectedTahunAjar.value = value;
-    _refreshData();
+    if (value != null && selectedTahunAjar.value != value) {
+      selectedTahunAjar.value = value;
+      selectedJadwalUntukPengajuan.clear(); 
+      searchQuery.value = ''; 
+      _refreshData(); 
+    }
   }
 
   void onSemesterChanged(String? value) {
-    selectedSemester.value = value;
-    _refreshData();
+    if (value != null && selectedSemester.value != value) {
+      selectedSemester.value = value;
+      selectedJadwalUntukPengajuan.clear(); 
+      searchQuery.value = ''; 
+      _refreshData(); 
+    }
   }
 
-  void _refreshData() {
-    // Simulate data refresh based on selected tahun ajar and semester
-    if (selectedTahunAjar.value != null && selectedSemester.value != null) {
-      // Here you would typically call an API or update data
-      print(
-        'Refreshing data for ${selectedTahunAjar.value} - ${selectedSemester.value}',
+  void updateSearchQuery(String query) {
+    searchQuery.value = query;
+    _updateFilteredJadwalList(); 
+  }
+
+  void toggleJadwalSelection(JadwalMatakuliahModel jadwalItem) {
+    final isSelected = selectedJadwalUntukPengajuan.any((item) => item.idJadwal == jadwalItem.idJadwal);
+
+    if (isSelected) {
+      selectedJadwalUntukPengajuan.removeWhere((item) => item.idJadwal == jadwalItem.idJadwal);
+    } else {
+      selectedJadwalUntukPengajuan.add(jadwalItem);
+    }
+  }
+
+  bool isJadwalSelected(JadwalMatakuliahModel jadwalItem) {
+    return selectedJadwalUntukPengajuan.any((item) => item.idJadwal == jadwalItem.idJadwal);
+  }
+
+  Future<void> storeSelectedFrs() async {
+    if (selectedJadwalUntukPengajuan.isEmpty) {
+      Get.snackbar('Belum Ada Pilihan', 'Silakan pilih minimal satu mata kuliah untuk diajukan.',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange, colorText: Colors.white);
+      return;
+    }
+
+    if (selectedTahunAjar.value == null || selectedSemester.value == null) {
+      Get.snackbar('Periode Belum Lengkap', 'Pastikan Tahun Ajar dan Semester sudah dipilih.',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    Get.defaultDialog(
+      title: "Konfirmasi Pengajuan FRS",
+      titleStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+      middleText: "Anda akan mengajukan ${selectedJadwalUntukPengajuan.length} mata kuliah untuk periode ${selectedTahunAjar.value} Semester ${selectedSemester.value}. Lanjutkan?",
+      textConfirm: "Ya, Ajukan",
+      textCancel: "Batal",
+      confirmTextColor: Colors.white,
+      buttonColor: Get.theme.primaryColor, 
+      onConfirm: () async {
+        Get.back(); 
+        await _executeStoreFrs();
+      }
+    );
+  }
+  
+  Future<void> _executeStoreFrs() async {
+    isStoringFrs.value = true;
+     Get.dialog( 
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
+
+    try {
+      final List<String> idJadwalDipilih = selectedJadwalUntukPengajuan.map((item) => item.idJadwal).toList();
+      
+      final apiResponse = await _frsService.storeFrs(
+        idJadwalDipilih: idJadwalDipilih,
+        tahunAjar: selectedTahunAjar.value!,
+        semester: selectedSemester.value!,
       );
-    }
-  }
+      
+      if(Get.isDialogOpen ?? false) Get.back(); 
 
-  void removeFrsItem(int index) {
-    if (index >= 0 && index < frsList.length) {
-      frsList.removeAt(index);
+      if (apiResponse.success) {
+        Get.snackbar('Berhasil', apiResponse.message ?? 'FRS berhasil diajukan.',
+            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green, colorText: Colors.white);
+        selectedJadwalUntukPengajuan.clear(); 
+        await _refreshData(); 
+      } else {
+        String errorMessage = apiResponse.message ?? 'Gagal mengajukan FRS.';
+        if (apiResponse.validationErrors != null && apiResponse.validationErrors!.isNotEmpty) {
+          final errors = apiResponse.validationErrors!.entries
+              .map((e) => '${e.key}: ${e.value is List ? (e.value as List).join(', ') : e.value}')
+              .join('\n');
+          errorMessage += '\nDetail:\n$errors';
+        }
+        Get.defaultDialog(
+          title: "Gagal Mengajukan FRS", 
+          middleText: errorMessage, 
+          textConfirm: "OK", 
+          confirmTextColor: Colors.white,
+          buttonColor: Colors.red,
+          onConfirm:()=> Get.back()
+        );
+      }
+    } catch (e) {
+      if(Get.isDialogOpen ?? false) Get.back(); 
+      print("Controller Exception in storeSelectedFrs: $e");
+      Get.defaultDialog(
+        title: "Error Kritis", 
+        middleText: "Terjadi pengecualian saat mengajukan FRS: ${e.toString()}", 
+        textConfirm: "OK", 
+        confirmTextColor: Colors.white,
+        buttonColor: Colors.red,
+        onConfirm:()=> Get.back()
+      );
+    } finally {
+      isStoringFrs.value = false;
     }
-  }
-
-  void addFrsItem(FrsModel item) {
-    frsList.add(item);
   }
 }

@@ -16,12 +16,33 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   final AuthController _authController = Get.find<AuthController>();
 
+  // Helper method untuk memotong nama jika terlalu panjang
+  String _formatUserName(String fullName) {
+    if (fullName.isEmpty) return "Pengguna";
+    
+    // Jika nama kurang dari atau sama dengan 15 karakter, tampilkan penuh
+    if (fullName.length <= 15) {
+      return fullName;
+    }
+    
+    // Jika lebih dari 15 karakter, potong dan tambahkan "..."
+    return "${fullName.substring(0, 15)}...";
+  }
+
+  // Helper method untuk mendapatkan nama lengkap untuk tooltip
+  String _getFullUserName(String fullName) {
+    return fullName.isEmpty ? "Pengguna" : fullName;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.symmetric(
+            horizontal: Get.width * 0.08, // Responsive horizontal padding
+            vertical: Get.height * 0.02,  // Responsive vertical padding
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -29,26 +50,58 @@ class _HomeViewState extends State<HomeView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Obx(() {
-                    final userName = _authController.user.value?.nama ?? "Pengguna";
-                    final userNrp = _authController.user.value?.nrp ?? "Memuat...";
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Halo, $userName!",
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                  Expanded( // Wrap dengan Expanded untuk mencegah overflow
+                    child: Obx(() {
+                      final fullUserName = _authController.user.value?.nama ?? "Pengguna";
+                      final displayName = _formatUserName(fullUserName);
+                      final userNrp = _authController.user.value?.nrp ?? "Memuat...";
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Nama dengan tooltip jika nama dipotong
+                          fullUserName.length > 15
+                            ? Tooltip(
+                                message: "Halo, $fullUserName!",
+                                child: Text(
+                                  "Halo, $displayName",
+                                  style: TextStyle(
+                                    fontSize: Get.width < 400 ? 20 : 24, // Responsive font size
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              )
+                            : Text(
+                                "Halo, $displayName!",
+                                style: TextStyle(
+                                  fontSize: Get.width < 400 ? 20 : 24, // Responsive font size
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                          SizedBox(height: Get.height * 0.005), // Responsive spacing
+                          Text(
+                            userNrp, 
+                            style: TextStyle(
+                              fontSize: Get.width < 400 ? 14 : 16, // Responsive font size
+                              color: Colors.grey[600],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(userNrp, style: const TextStyle(fontSize: 16)),
-                      ],
-                    );
-                  }),
+                        ],
+                      );
+                    }),
+                  ),
+                  SizedBox(width: Get.width * 0.02), // Responsive spacing
                   PopupMenuButton(
-                    icon: const Icon(Icons.menu, size: 32),
+                    icon: Icon(
+                      Icons.menu, 
+                      size: Get.width < 400 ? 28 : 32, // Responsive icon size
+                    ),
                     itemBuilder: (context) => [
                       const PopupMenuItem(
                         value: 1,
@@ -106,7 +159,7 @@ class _HomeViewState extends State<HomeView> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: Get.height * 0.03), // Responsive spacing
 
               // *** Next Class Section ***
               Column(
@@ -114,69 +167,82 @@ class _HomeViewState extends State<HomeView> {
                 children: [
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(Get.width * 0.04), // Responsive padding
                     decoration: BoxDecoration(
                       color: const Color(0xFF0056B3),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           "Kelas saat ini",
-                          style: TextStyle(color: Colors.white, fontSize: 14),
+                          style: TextStyle(
+                            color: Colors.white, 
+                            fontSize: Get.width < 400 ? 12 : 14, // Responsive font
+                          ),
                         ),
-                        SizedBox(height: 4),
+                        SizedBox(height: Get.height * 0.005),
                         Text(
                           "Kecerdasan Buatan",
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: Get.width < 400 ? 18 : 20, // Responsive font
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: Get.height * 0.01),
                         Row(
                           children: [
-                            Icon(Icons.person, size: 16, color: Colors.white),
-                            SizedBox(width: 6),
-                            Text(
-                              "Aliridho Barakbah",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
+                            const Icon(Icons.person, size: 16, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                "Aliridho Barakbah",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: Get.width < 400 ? 11 : 13, // Responsive font
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: Get.height * 0.01),
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.access_time,
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
                               "13:00 - 16:20",
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 13,
+                                fontSize: Get.width < 400 ? 11 : 13, // Responsive font
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Icon(
+                            const SizedBox(width: 12),
+                            const Icon(
                               Icons.location_on,
                               size: 16,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 6),
-                            Text(
-                              "C 203",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                "C 203",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: Get.width < 400 ? 11 : 13, // Responsive font
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -184,61 +250,67 @@ class _HomeViewState extends State<HomeView> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: Get.height * 0.015), // Responsive spacing
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(Get.width * 0.04), // Responsive padding
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFC107),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           "Kelas selanjutnya",
                           style: TextStyle(
-                            color: Color(0xFF00296B),
-                            fontSize: 14,
+                            color: const Color(0xFF00296B),
+                            fontSize: Get.width < 400 ? 12 : 14, // Responsive font
                           ),
                         ),
-                        SizedBox(height: 4),
+                        SizedBox(height: Get.height * 0.005),
                         Text(
                           "Workshop Pemrograman Berbasis Agile",
                           style: TextStyle(
-                            color: Color(0xFF00296B),
-                            fontSize: 20,
+                            color: const Color(0xFF00296B),
+                            fontSize: Get.width < 400 ? 18 : 20, // Responsive font
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: Get.height * 0.01),
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.access_time,
                               size: 16,
                               color: Color(0xFF00296B),
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
                               "13:00 - 16:20",
                               style: TextStyle(
-                                color: Color(0xFF00296B),
-                                fontSize: 13,
+                                color: const Color(0xFF00296B),
+                                fontSize: Get.width < 400 ? 11 : 13, // Responsive font
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Icon(
+                            const SizedBox(width: 12),
+                            const Icon(
                               Icons.location_on,
                               size: 16,
                               color: Color(0xFF00296B),
                             ),
-                            SizedBox(width: 6),
-                            Text(
-                              "C 203",
-                              style: TextStyle(
-                                color: Color(0xFF00296B),
-                                fontSize: 13,
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                "C 203",
+                                style: TextStyle(
+                                  color: const Color(0xFF00296B),
+                                  fontSize: Get.width < 400 ? 11 : 13, // Responsive font
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -249,30 +321,33 @@ class _HomeViewState extends State<HomeView> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: Get.height * 0.03), // Responsive spacing
 
               // *** Next Assignment Section ***
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     "Tugas Mendatang",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: Get.width < 400 ? 18 : 20, // Responsive font
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  Icon(Icons.chevron_right),
+                  const Icon(Icons.chevron_right),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: Get.height * 0.02), // Responsive spacing
               SizedBox(
-                height: 140,
+                height: Get.height * 0.18, // Responsive height
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: 3,
                   itemBuilder: (context, index) {
                     return Container(
-                      width: MediaQuery.of(context).size.width * 0.75,
-                      margin: const EdgeInsets.only(right: 16),
-                      padding: const EdgeInsets.all(16),
+                      width: Get.width * 0.75, // Responsive width
+                      margin: EdgeInsets.only(right: Get.width * 0.04), // Responsive margin
+                      padding: EdgeInsets.all(Get.width * 0.04), // Responsive padding
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -284,7 +359,7 @@ class _HomeViewState extends State<HomeView> {
                           ),
                         ],
                       ),
-                      child: const Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -292,32 +367,37 @@ class _HomeViewState extends State<HomeView> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: Get.width < 400 ? 14 : 16, // Responsive font
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          SizedBox(height: Get.height * 0.005),
                           Text(
                             "Kecerdasan Buatan",
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: Get.width < 400 ? 11 : 13, // Responsive font
+                              color: Colors.grey,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
-                          Spacer(),
+                          const Spacer(),
                           Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.calendar_today,
                                 size: 16,
                                 color: Colors.grey,
                               ),
-                              SizedBox(width: 6),
+                              const SizedBox(width: 6),
                               Text(
                                 "27 Mei 2025",
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: Get.width < 400 ? 10 : 12, // Responsive font
                                   color: Colors.grey,
                                 ),
                               ),
-                              Spacer(),
+                              const Spacer(),
                             ],
                           ),
                         ],
@@ -327,44 +407,51 @@ class _HomeViewState extends State<HomeView> {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: Get.height * 0.03), // Responsive spacing
 
               // *** Announcement Section ***
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     "Pengumuman",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: Get.width < 400 ? 18 : 20, // Responsive font
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  Icon(Icons.chevron_right),
+                  const Icon(Icons.chevron_right),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: Get.height * 0.02), // Responsive spacing
               Container(
                 decoration: BoxDecoration(
                   color: Colors.orange[100],
                   borderRadius: BorderRadius.circular(16),
                 ),
-                padding: const EdgeInsets.all(16),
-                child: const Column(
+                padding: EdgeInsets.all(Get.width * 0.04), // Responsive padding
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "Pengumuman Webinar Alumni",
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: Get.width < 400 ? 14 : 16, // Responsive font
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: Get.height * 0.01),
                     Text(
                       "Akan ada webinar alumni pada tanggal 30 Mei 2025. Segera daftarkan diri Anda!",
-                      style: TextStyle(fontSize: 14),
+                      style: TextStyle(
+                        fontSize: Get.width < 400 ? 12 : 14, // Responsive font
+                      ),
                     ),
                   ],
                 ),
               ),
+              
+              SizedBox(height: Get.height * 0.02), // Bottom spacing untuk scroll
             ],
           ),
         ),

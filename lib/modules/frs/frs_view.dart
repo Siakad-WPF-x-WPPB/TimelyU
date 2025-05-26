@@ -1,305 +1,606 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import 'package:timelyu/modules/frs/frs_controller.dart';
+import 'package:timelyu/modules/frs/frs_controller.dart'; 
+import 'package:timelyu/data/models/frs_model.dart';
+import 'package:timelyu/modules/frs/frs_memilih_view.dart';
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
+
+// --- AppColors (jika belum ada di file terpisah) ---
+class AppColors {
+  static const Color primary = Color(0xFF007AFF);
+  static const Color primaryLight = Color(0xFFE6F2FF);
+  static const Color accent = Color(0xFFFF9500);
+  static const Color textTitle = Color(0xFF1D1D1F);
+  static const Color textBody = Color(0xFF3C3C43);
+  static const Color textBodySecondary = Color(0xFF6E6E73);
+  static const Color background = Colors.white;
+  static const Color cardBackground = Colors.white;
+  static const Color divider = Color(0xFFE0E0E0);
+  static const Color iconColor = Color(0xFF6E6E73);
+  static const Color fabColor = Color(0xFF007AFF);
+
+  // Warna untuk status
+  static const Color statusApproved = Color(0xFF34C759);
+  static const Color statusPending = Color(0xFFFF9500);
+  static const Color statusRejected = Color(0xFFFF3B30);
+  static const Color statusDefault = Color(0xFF8E8E93);
+}
 
 class FrsView extends GetView<FrsController> {
   const FrsView({super.key});
 
+  // Helper untuk mendapatkan ukuran layar
+  bool get isTablet => Get.width >= 768;
+  bool get isDesktop => Get.width >= 1024;
+  bool get isMobile => Get.width < 768;
+
   @override
   Widget build(BuildContext context) {
-    final FrsController controller = Get.put(FrsController());
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Persetujuan FRS'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-      ),
+      backgroundColor: AppColors.background,
+      appBar: _buildResponsiveAppBar(),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: Get.width * 0.05,
-              vertical: Get.height * 0.02,
-            ),
-            child: Column(
-              children: [
-                _buildDropdownSection(),
-                const SizedBox(height: 16),
-                _buildInfoSection(),
-                const SizedBox(height: 16),
-                _buildFrsListSection(),
-              ],
-            ),
-          ),
+        child: _buildResponsiveBody(context),
+      ),
+      floatingActionButton: _buildResponsiveFAB(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: isMobile ? const TaskBottomNavigationBar() : null,
+    );
+  }
+
+  PreferredSizeWidget _buildResponsiveAppBar() {
+    return AppBar(
+      title: Text(
+        'Persetujuan FRS',
+        style: TextStyle(
+          color: AppColors.textTitle,
+          fontWeight: FontWeight.w600,
+          fontSize: isDesktop ? 20 : isTablet ? 19 : 18,
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
-      bottomNavigationBar: const TaskBottomNavigationBar(),
+      centerTitle: true,
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.textTitle,
+      elevation: 0.8,
+      shadowColor: Colors.grey.withOpacity(0.2),
+      toolbarHeight: isDesktop ? 64 : isTablet ? 60 : kToolbarHeight,
     );
   }
 
-  Widget _buildDropdownSection() {
-    return Row(
-      spacing: 8,
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        Expanded(
-          child: _buildDropdownField(
-            label: 'Tahun Ajar',
-            value: controller
-            .selectedTahunAjar,
-            onChanged: controller.onTahunAjarChanged,
+  Widget _buildResponsiveBody(BuildContext context) {
+    final horizontalPadding = _getHorizontalPadding();
+    final verticalPadding = _getVerticalPadding();
+
+    if (isDesktop) {
+      // Desktop layout dengan max width dan center alignment
+      return Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
           ),
+          child: _buildFrsListSection(context),
         ),
-        Expanded(
-          child: _buildDropdownField(
-            label: 'Semester',
-            value: controller.selectedSemester,
-            onChanged: controller.onSemesterChanged,
-          ),
+      );
+    } else {
+      // Mobile dan tablet layout
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
         ),
-      ],
-    );
+        child: _buildFrsListSection(context),
+      );
+    }
   }
 
-  Widget _buildDropdownField({
-    required String label,
-    required Rxn<String> value,
-    required Function(String?) onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 14)),
-        SizedBox(
-          height: Get.height * 0.04,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black26, width: 1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: Obx(() => DropdownButton<String>(
-                icon: Icon(
-                  PhosphorIcons.caretDown(PhosphorIconsStyle.regular),
-                  size: 14,
-                ),
-                isExpanded: true,
-                value: value.value,
-                style: const TextStyle(fontSize: 14, color: Colors.black),
-                items: controller.items.map(_buildMenuItem).toList(),
-                onChanged: onChanged,
-              )),
-            ),
+  Widget _buildResponsiveFAB() {
+    if (isDesktop) {
+      return FloatingActionButton.extended(
+        onPressed: () => Get.to(() => const FrsInputView()),
+        backgroundColor: AppColors.fabColor,
+        icon: Icon(PhosphorIcons.plusCircle(), color: Colors.white, size: 22),
+        label: const Text(
+          "Ambil FRS",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildInfoSection() {
-    return Obx(() => Column(
-      children: [
-        _buildInfoRow('Dosen Wali', controller.dosenWali.value),
-        const SizedBox(height: 8),
-        _buildKreditRow(
-          'Batas / Sisa',
-          controller.batasKredit.value,
-          controller.sisaKredit.value,
-        ),
-        const SizedBox(height: 8),
-        _buildInfoRow('Pengisian', controller.tanggalPengisian.value),
-      ],
-    ));
-  }
-
-  Widget _buildFrsListSection() {
-    return Obx(() => ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: controller.frsList.length,
-      itemBuilder: (context, index) {
-        final frsItem = controller.frsList[index];
-        return Padding(
-          padding: EdgeInsets.only(bottom: Get.height * 0.02),
-          child: _buildFrsCard(
-            frsItem: frsItem,
-            index: index,
+        elevation: 4.0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      );
+    } else if (isTablet) {
+      return FloatingActionButton.extended(
+        onPressed: () => Get.to(() => const FrsInputView()),
+        backgroundColor: AppColors.fabColor,
+        icon: Icon(PhosphorIcons.plusCircle(), color: Colors.white, size: 20),
+        label: const Text(
+          "Ambil FRS",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
           ),
-        );
+        ),
+        elevation: 4.0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      );
+    } else {
+      return FloatingActionButton(
+        onPressed: () => Get.to(() => const FrsInputView()),
+        backgroundColor: AppColors.fabColor,
+        child: Icon(PhosphorIcons.plusCircle(), color: Colors.white, size: 24),
+        elevation: 4.0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      );
+    }
+  }
+
+  double _getHorizontalPadding() {
+    if (isDesktop) return 24.0;
+    if (isTablet) return Get.width * 0.04;
+    return Get.width * 0.05;
+  }
+
+  double _getVerticalPadding() {
+    if (isDesktop) return 24.0;
+    if (isTablet) return Get.height * 0.025;
+    return Get.height * 0.02;
+  }
+
+  Widget _buildFrsListSection(BuildContext context) {
+    return GetX(
+      init: controller,
+      initState: (state) => controller.fetchFrsData(),
+      builder: (controller) {
+        if (controller.isLoadingFrs.value) {
+          return _buildLoadingState();
+        }
+
+        if (controller.selectedTahunAjar.value == null ||
+            controller.selectedSemester.value == null) {
+          return _buildNoPeriodState();
+        }
+
+        if (controller.frsList.isEmpty) {
+          return _buildEmptyState(context);
+        }
+
+        return _buildResponsiveFrsList();
       },
-    ));
+    );
   }
 
-  Widget _buildFloatingActionButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
-      child: FloatingActionButton(
-        onPressed: () {
-          Get.toNamed('/frs-memilih');
-        },
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-        backgroundColor: const Color(0xFF00509D),
-        child: Icon(
-          PhosphorIcons.plus(PhosphorIconsStyle.regular),
-          color: Colors.white,
+  Widget _buildLoadingState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: isDesktop ? 80 : 50),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: isDesktop ? 60 : isTablet ? 50 : 40,
+              height: isDesktop ? 60 : isTablet ? 50 : 40,
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: isDesktop ? 4 : 3,
+              ),
+            ),
+            SizedBox(height: isDesktop ? 24 : 16),
+            Text(
+              "Memuat data FRS...",
+              style: TextStyle(
+                fontSize: isDesktop ? 18 : isTablet ? 16 : 15,
+                color: AppColors.textBodySecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      children: [
-        SizedBox(
-          width: Get.width * 0.25,
-          child: Text(label, style: const TextStyle(fontSize: 14)),
+  Widget _buildNoPeriodState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(isDesktop ? 48 : isTablet ? 40 : 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              PhosphorIcons.info(PhosphorIconsStyle.duotone),
+              size: isDesktop ? 80 : isTablet ? 70 : 50,
+              color: AppColors.primary.withOpacity(0.7),
+            ),
+            SizedBox(height: isDesktop ? 24 : 16),
+            Text(
+              "Periode FRS belum ditentukan untuk ditampilkan.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: isDesktop ? 18 : isTablet ? 17 : 16,
+                color: AppColors.textBodySecondary,
+                height: 1.5,
+              ),
+            ),
+          ],
         ),
-        const Text(':', style: TextStyle(fontSize: 14)),
-        const SizedBox(width: 8),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildKreditRow(String label, String batas, String sisa) {
-    return Row(
-      children: [
-        SizedBox(
-          width: Get.width * 0.25,
-          child: Text(label, style: const TextStyle(fontSize: 14)),
+  Widget _buildResponsiveFrsList() {
+    if (isDesktop) {
+      // Desktop: Grid layout untuk menampilkan lebih banyak cards
+      return GridView.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 20,
+          mainAxisSpacing: 20,
+          childAspectRatio: 2.2,
         ),
-        const Text(':', style: TextStyle(fontSize: 14)),
-        const SizedBox(width: 8),
-        RichText(
-          text: TextSpan(
-            style: const TextStyle(fontSize: 14, color: Colors.black),
-            children: [
-              TextSpan(
-                text: batas,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.blue,
-                ),
+        itemCount: controller.frsList.length,
+        itemBuilder: (context, index) {
+          return _buildFrsCard(
+            context: context,
+            frsItem: controller.frsList[index],
+          );
+        },
+      );
+    } else if (isTablet) {
+      // Tablet: Bisa single column atau grid tergantung orientasi
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final isLandscape = constraints.maxWidth > constraints.maxHeight;
+          
+          if (isLandscape) {
+            // Landscape tablet: 2 columns
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 2.0,
               ),
-              const TextSpan(text: ' / '),
-              TextSpan(
-                text: sisa,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.yellow,
-                ),
-              ),
-              const TextSpan(
-                text: " SKS",
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+              itemCount: controller.frsList.length,
+              itemBuilder: (context, index) {
+                return _buildFrsCard(
+                  context: context,
+                  frsItem: controller.frsList[index],
+                );
+              },
+            );
+          } else {
+            // Portrait tablet: Single column
+            return ListView.builder(
+              itemCount: controller.frsList.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: Get.height * 0.02),
+                  child: _buildFrsCard(
+                    context: context,
+                    frsItem: controller.frsList[index],
+                  ),
+                );
+              },
+            );
+          }
+        },
+      );
+    } else {
+      // Mobile: Single column list
+      return ListView.builder(
+        itemCount: controller.frsList.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: Get.height * 0.018),
+            child: _buildFrsCard(
+              context: context,
+              frsItem: controller.frsList[index],
+            ),
+          );
+        },
+      );
+    }
   }
 
-  Widget _buildFrsCard({
-    required frsItem,
-    required int index,
-  }) {
+  Widget _buildEmptyState(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        vertical: isDesktop ? 80 : isTablet ? 70 : 60,
+        horizontal: isDesktop ? 32 : isTablet ? 28 : 24,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  frsItem.namaMatakuliah,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+          Icon(
+            PhosphorIcons.folderOpen(PhosphorIconsStyle.duotone),
+            size: isDesktop ? 100 : isTablet ? 90 : 80,
+            color: AppColors.primary.withOpacity(0.5),
+          ),
+          SizedBox(height: isDesktop ? 32 : isTablet ? 28 : 24),
+          Text(
+            'Oops, Data FRS Kosong',
+            style: TextStyle(
+              fontSize: isDesktop ? 24 : isTablet ? 22 : 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textTitle,
+            ),
+          ),
+          SizedBox(height: isDesktop ? 16 : 12),
+          Obx(() => Text(
+                'Sepertinya Anda belum mengambil mata kuliah untuk periode ${controller.selectedSemester.value?.toLowerCase() ?? "yang dipilih"} ${controller.selectedTahunAjar.value ?? ""}, atau data tidak dapat ditemukan saat ini.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: isDesktop ? 17 : isTablet ? 16 : 15,
+                  color: AppColors.textBodySecondary,
+                  height: 1.6,
                 ),
+              )),
+          SizedBox(height: isDesktop ? 40 : isTablet ? 35 : 30),
+          ElevatedButton.icon(
+            icon: Icon(
+              PhosphorIcons.arrowsClockwise(PhosphorIconsStyle.bold),
+              color: Colors.white,
+              size: isDesktop ? 22 : isTablet ? 21 : 20,
+            ),
+            label: Text(
+              'Muat Ulang Data',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isDesktop ? 17 : isTablet ? 16 : 15.5,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: frsItem.statusColor,
-              borderRadius: BorderRadius.circular(20),
             ),
-            padding: EdgeInsets.symmetric(
-              horizontal: Get.width * 0.02,
-              vertical: Get.height * 0.005,
+            onPressed: () => controller.fetchFrsData(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 40 : isTablet ? 35 : 30,
+                vertical: isDesktop ? 18 : isTablet ? 16 : 14,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 3,
+              shadowColor: AppColors.primary.withOpacity(0.3),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  PhosphorIcons.warningCircle(PhosphorIconsStyle.regular),
-                  color: Colors.white,
-                  size: 20,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  frsItem.status,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          _buildCardInfoRow(
-            PhosphorIcons.student(PhosphorIconsStyle.regular),
-            frsItem.pengajar,
-          ),
-          const SizedBox(height: 4),
-          _buildCardInfoRow(
-            PhosphorIcons.clock(PhosphorIconsStyle.regular),
-            frsItem.waktu,
-          ),
-          const SizedBox(height: 4),
-          _buildCardInfoRow(
-            PhosphorIcons.chalkboardSimple(PhosphorIconsStyle.regular),
-            frsItem.kelas,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCardInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.black),
-        const SizedBox(width: 8),
-        Text(text, style: const TextStyle(fontSize: 14)),
-      ],
+  Widget _buildFrsCard({required BuildContext context, required FrsModel frsItem}) {
+    String jamMulaiFormatted = frsItem.jamMulai.length >= 5
+        ? frsItem.jamMulai.substring(0, 5)
+        : frsItem.jamMulai;
+    String jamSelesaiFormatted = frsItem.jamSelesai.length >= 5
+        ? frsItem.jamSelesai.substring(0, 5)
+        : frsItem.jamSelesai;
+    String jadwalLengkap =
+        "${frsItem.hari.isNotEmpty ? frsItem.hari : 'N/A'}, $jamMulaiFormatted - $jamSelesaiFormatted";
+
+    return Card(
+      elevation: isDesktop ? 4 : isTablet ? 3.5 : 3,
+      margin: EdgeInsets.symmetric(
+        vertical: isDesktop ? 8 : isTablet ? 7 : 6,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isDesktop ? 16 : isTablet ? 14 : 12),
+      ),
+      color: AppColors.cardBackground,
+      shadowColor: Colors.grey.withOpacity(0.15),
+      child: Padding(
+        padding: EdgeInsets.all(isDesktop ? 20 : isTablet ? 18 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    frsItem.namaMatakuliah.isNotEmpty 
+                        ? frsItem.namaMatakuliah 
+                        : "Nama Mata Kuliah Tidak Tersedia",
+                    style: TextStyle(
+                      fontSize: isDesktop ? 19 : isTablet ? 18 : 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textTitle,
+                    ),
+                  ),
+                ),
+                SizedBox(width: isDesktop ? 16 : isTablet ? 12 : 8),
+                _buildStatusChip(frsItem.status),
+              ],
+            ),
+            if (frsItem.tipeMatakuliah.isNotEmpty || frsItem.sks > 0) ...[
+              SizedBox(height: isDesktop ? 12 : isTablet ? 10 : 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  if (frsItem.tipeMatakuliah.isNotEmpty)
+                    _buildInfoChip(
+                      frsItem.tipeMatakuliah,
+                      AppColors.primary.withOpacity(0.1),
+                      AppColors.primary,
+                    ),
+                  if (frsItem.sks > 0)
+                    _buildInfoChip(
+                      '${frsItem.sks} SKS',
+                      AppColors.accent.withOpacity(0.15),
+                      Colors.amberAccent,
+                    ),
+                ],
+              ),
+            ],
+            SizedBox(height: isDesktop ? 20 : isTablet ? 16 : 12),
+            _buildCardInfoRow(
+              PhosphorIcons.chalkboardTeacher(PhosphorIconsStyle.duotone),
+              frsItem.namaDosen.isNotEmpty 
+                  ? frsItem.namaDosen 
+                  : "Belum ada dosen pengampu",
+              color: AppColors.primary,
+            ),
+            SizedBox(height: isDesktop ? 14 : isTablet ? 12 : 10),
+            _buildCardInfoRow(
+              PhosphorIcons.clock(PhosphorIconsStyle.duotone),
+              jadwalLengkap,
+              color: AppColors.accent,
+            ),
+            SizedBox(height: isDesktop ? 14 : isTablet ? 12 : 10),
+            if (isDesktop || isTablet) ...[
+              // Desktop/Tablet: Single row untuk kelas dan ruangan
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _buildCardInfoRow(
+                      PhosphorIcons.identificationBadge(PhosphorIconsStyle.duotone),
+                      'Kelas ${frsItem.kelas.isNotEmpty ? frsItem.kelas : "-"}',
+                    ),
+                  ),
+                  SizedBox(width: isDesktop ? 20 : 16),
+                  Expanded(
+                    flex: 3,
+                    child: _buildCardInfoRow(
+                      PhosphorIcons.mapPinLine(PhosphorIconsStyle.duotone),
+                      frsItem.ruangan.isNotEmpty 
+                          ? frsItem.ruangan 
+                          : "Ruangan belum ditentukan",
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              // Mobile: Separate rows untuk better readability
+              _buildCardInfoRow(
+                PhosphorIcons.identificationBadge(PhosphorIconsStyle.duotone),
+                'Kelas ${frsItem.kelas.isNotEmpty ? frsItem.kelas : "-"}',
+              ),
+              const SizedBox(height: 10),
+              _buildCardInfoRow(
+                PhosphorIcons.mapPinLine(PhosphorIconsStyle.duotone),
+                frsItem.ruangan.isNotEmpty 
+                    ? frsItem.ruangan 
+                    : "Ruangan belum ditentukan",
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  DropdownMenuItem<String> _buildMenuItem(String item) =>
-      DropdownMenuItem(value: item, child: Text(item));
+  Widget _buildInfoChip(String text, Color backgroundColor, Color textColor) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 8 : isTablet ? 7 : 6,
+        vertical: isDesktop ? 4 : isTablet ? 3 : 2,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: isDesktop ? 12 : isTablet ? 11.5 : 11,
+          color: textColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    String displayText;
+    IconData statusIcon;
+    Color chipColor;
+    Color textColor = Colors.white;
+
+    switch (status.toLowerCase()) {
+      case 'approved':
+      case 'disetujui':
+        displayText = 'Disetujui';
+        statusIcon = PhosphorIcons.checkCircle(PhosphorIconsStyle.fill);
+        chipColor = AppColors.statusApproved;
+        break;
+      case 'pending':
+        displayText = 'Pending';
+        statusIcon = PhosphorIcons.hourglassSimple(PhosphorIconsStyle.fill);
+        chipColor = AppColors.statusPending;
+        break;
+      case 'rejected':
+      case 'ditolak':
+        displayText = 'Ditolak';
+        statusIcon = PhosphorIcons.xCircle(PhosphorIconsStyle.fill);
+        chipColor = AppColors.statusRejected;
+        break;
+      default:
+        displayText = status.isNotEmpty ? (status.capitalizeFirst ?? status) : "N/A";
+        statusIcon = PhosphorIcons.question(PhosphorIconsStyle.fill);
+        chipColor = AppColors.statusDefault;
+    }
+
+    return Chip(
+      avatar: Icon(
+        statusIcon,
+        color: textColor,
+        size: isDesktop ? 16 : isTablet ? 15.5 : 15,
+      ),
+      label: Text(
+        displayText,
+        style: TextStyle(
+          fontSize: isDesktop ? 13 : isTablet ? 12.5 : 11.5,
+          fontWeight: FontWeight.w500,
+          color: textColor,
+        ),
+      ),
+      backgroundColor: chipColor,
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 10 : isTablet ? 9 : 8,
+        vertical: isDesktop ? 4 : 3,
+      ),
+      labelPadding: EdgeInsets.only(
+        left: isDesktop ? 4 : 3,
+        right: isDesktop ? 8 : isTablet ? 7 : 6,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  Widget _buildCardInfoRow(IconData icon, String text, {Color? color, FontWeight? fontWeight}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: isDesktop ? 22 : isTablet ? 21 : 20,
+          color: color ?? AppColors.iconColor,
+        ),
+        SizedBox(width: isDesktop ? 12 : isTablet ? 11 : 10),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: isDesktop ? 16 : isTablet ? 15 : 14,
+              color: AppColors.textBody,
+              fontWeight: fontWeight ?? FontWeight.normal,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
