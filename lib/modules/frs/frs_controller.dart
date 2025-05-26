@@ -28,7 +28,7 @@ class FrsController extends GetxController {
   final selectedTahunAjar = Rxn<String>(); // Format "YYYY/YYYY"
   final selectedSemester = Rxn<String>();
   // Pastikan tahunAjarItems dan semesterItems diisi dengan data yang relevan
-  final tahunAjarItems = <String>['2024/2025', '2023/2024', '2022/2023', '2021/2022','2020/2021', '2019/2020'].obs;
+  final tahunAjarItems = <String>['2025/2026','2024/2025', '2023/2024', '2022/2023', '2021/2022','2020/2021', '2019/2020'].obs;
   final semesterItems = <String>['Genap', 'Ganjil'].obs;
 
   // --- Info Tambahan Mahasiswa (Contoh) ---

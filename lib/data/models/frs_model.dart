@@ -9,7 +9,7 @@ class FrsModel {
   final String jamSelesai;
   final String namaMatakuliah;
   final String tipeMatakuliah;
-  final int sks;             
+  final int sks;
   final String namaDosen;
   final String kelas;
   final String ruangan;
@@ -19,7 +19,7 @@ class FrsModel {
 
   FrsModel({
     required this.id,
-    this.idJadwalAsal, 
+    this.idJadwalAsal,
     required this.status,
     required this.hari,
     required this.jamMulai,
@@ -30,28 +30,57 @@ class FrsModel {
     required this.namaDosen,
     required this.kelas,
     required this.ruangan,
-    required this.tahunAjar, 
+    required this.tahunAjar,
     required this.tahunBerakhir,
     required this.semester,
   });
 
   factory FrsModel.fromJson(Map<String, dynamic> json) {
+    // Helper untuk mengambil nilai integer dari field yang mungkin berupa int atau Map
+    int? _parseIntFromDynamic(dynamic value, {String keyInMap = 'value'}) {
+      if (value is int) {
+        return value;
+      } else if (value is String) {
+        return int.tryParse(value);
+      } else if (value is Map<String, dynamic> && value.containsKey(keyInMap) && value[keyInMap] is int) {
+        // Asumsikan struktur map adalah {keyInMap: int}, default keyInMap adalah 'value'
+        return value[keyInMap] as int?;
+      } else if (value is Map<String, dynamic> && value.containsKey(keyInMap) && value[keyInMap] is String) {
+        // Juga tangani jika value di dalam map adalah String angka
+        return int.tryParse(value[keyInMap] as String);
+      }
+      return null;
+    }
+
+    int? parsedTahunAjar = _parseIntFromDynamic(json['tahun_ajar']);
+    int? parsedTahunBerakhir = _parseIntFromDynamic(json['tahun_berakhir']);
+
+    // Fallback jika parsing gagal atau field tidak ada
+    int finalTahunAjar = parsedTahunAjar ?? DateTime.now().year;
+    int finalTahunBerakhir = parsedTahunBerakhir ?? (parsedTahunAjar ?? DateTime.now().year) + 1;
+
+    // Pastikan tahun berakhir selalu lebih besar atau sama dengan tahun ajar
+    if (finalTahunBerakhir < finalTahunAjar) {
+        finalTahunBerakhir = finalTahunAjar + 1;
+    }
+
+
     return FrsModel(
       id: json['id'] as String? ?? '',
       // Sesuaikan 'id_jadwal_asal' dengan nama field aktual dari API FRS Anda
-      idJadwalAsal: json['id_jadwal_asal'] as String? ?? json['jadwal_id'] as String?, 
+      idJadwalAsal: json['id_jadwal_asal'] as String? ?? json['jadwal_id'] as String?,
       status: json['status'] as String? ?? 'pending',
       hari: json['hari'] as String? ?? '',
       jamMulai: json['jam_mulai'] as String? ?? '',
       jamSelesai: json['jam_selesai'] as String? ?? '',
       namaMatakuliah: json['nama_matakuliah'] as String? ?? json['matakuliah'] as String? ?? '',
-      tipeMatakuliah: json['tipe_matakuliah'] as String? ?? '', 
-      sks: json['sks'] as int? ?? 0, 
+      tipeMatakuliah: json['tipe_matakuliah'] as String? ?? '',
+      sks: (json['sks'] is String ? int.tryParse(json['sks']) : json['sks'] as int?) ?? 0,
       namaDosen: json['nama_dosen'] as String? ?? json['dosen'] as String? ?? '',
       kelas: json['kelas'] as String? ?? '',
       ruangan: json['ruangan'] as String? ?? '',
-      tahunAjar: json['tahun_ajar'] as int? ?? DateTime.now().year, 
-      tahunBerakhir: json['tahun_berakhir'] as int? ?? (json['tahun_ajar'] as int? ?? DateTime.now().year) + 1,
+      tahunAjar: finalTahunAjar,
+      tahunBerakhir: finalTahunBerakhir,
       semester: json['semester'] as String? ?? '',
     );
   }
@@ -78,7 +107,7 @@ class FrsModel {
       // kecuali API Anda secara spesifik memerlukannya.
       // Untuk pembuatan baru (storeFrs), idJadwalAsal biasanya tidak dikirim dari client
       // karena FRS dibuat berdasarkan pilihan jadwal, bukan dari FRS lain.
-      // data['id_jadwal_asal'] = idJadwalAsal; 
+      // data['id_jadwal_asal'] = idJadwalAsal;
     }
     return data;
   }

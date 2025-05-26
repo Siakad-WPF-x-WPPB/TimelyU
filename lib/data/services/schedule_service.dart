@@ -49,7 +49,7 @@ class ScheduleService {
   // Sesuaikan IP Address ini jika server Anda berbeda atau jika menggunakan emulator
   // Untuk Android emulator, '10.0.2.2' biasanya merujuk ke localhost mesin host.
   // '127.0.0.1' untuk iOS simulator jika server berjalan di mesin yang sama.
-  static const String _baseUrl = "http://192.168.68.200:8000/api/mahasiswa";
+  static const String _baseUrl = "http://192.168.183.246:8000/api/mahasiswa";
   static const String _tokenKey = "auth_token";
 
   Future<String?> _getToken() async {
