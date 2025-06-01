@@ -1,6 +1,9 @@
+// timelyu/modules/nilai/nilai_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/modules/nilai/nilai_controller.dart';
+// Pastikan path ini benar dan widget TaskBottomNavigationBar terdefinisi
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 
 class NilaiView extends GetView<NilaiController> {
@@ -8,7 +11,6 @@ class NilaiView extends GetView<NilaiController> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -23,10 +25,10 @@ class NilaiView extends GetView<NilaiController> {
       ),
       body: Column(
         children: [
-          // Filter Section
           _buildFilterSection(),
           const SizedBox(height: 8),
-          // Mata Kuliah List
+          _buildCalculatedMetricSection(), // Menggantikan _buildIPSSection
+          const SizedBox(height: 16),
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value) {
@@ -62,13 +64,13 @@ class NilaiView extends GetView<NilaiController> {
                 itemBuilder: (context, index) {
                   final nilaiItem = controller.displayedNilaiList[index];
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 12), // Sedikit lebih banyak spasi
+                    margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.2), // Shadow lebih halus
+                          color: Colors.grey.withOpacity(0.2),
                           spreadRadius: 1,
                           blurRadius: 5,
                           offset: const Offset(0, 2),
@@ -84,6 +86,8 @@ class NilaiView extends GetView<NilaiController> {
                           const SizedBox(height: 8),
                           _buildNilaiRow('Kode MK', nilaiItem.kodemk),
                           const SizedBox(height: 8),
+                          _buildNilaiRow('Status', nilaiItem.status),
+                          const SizedBox(height: 8),
                           _buildNilaiRow('Nilai Angka', nilaiItem.nilaiAngka.toString()),
                           const SizedBox(height: 8),
                           _buildNilaiRow('Nilai Huruf', nilaiItem.nilaiHuruf),
@@ -97,7 +101,7 @@ class NilaiView extends GetView<NilaiController> {
           ),
         ],
       ),
-      bottomNavigationBar: TaskBottomNavigationBar(), // Pastikan widget ini ada dan path benar
+      bottomNavigationBar: TaskBottomNavigationBar(),
     );
   }
 
@@ -109,11 +113,10 @@ class NilaiView extends GetView<NilaiController> {
         children: [
           Row(
             children: [
-              // Tahun Ajaran Dropdown
               Expanded(
                 child: _buildDropdown(
                   label: 'Tahun Ajaran',
-                  value: controller.selectedTahunAjaran,
+                  valueObservable: controller.selectedTahunAjaran,
                   items: controller.tahunAjaranList,
                   onChanged: (value) {
                     if (value != null) {
@@ -123,11 +126,10 @@ class NilaiView extends GetView<NilaiController> {
                 ),
               ),
               const SizedBox(width: 16),
-              // Semester Dropdown
               Expanded(
                 child: _buildDropdown(
                   label: 'Semester',
-                  value: controller.selectedSemester,
+                  valueObservable: controller.selectedSemester,
                   items: controller.semesterList,
                   onChanged: (value) {
                     if (value != null) {
@@ -145,7 +147,7 @@ class NilaiView extends GetView<NilaiController> {
 
   Widget _buildDropdown({
     required String label,
-    required RxString value,
+    required RxString valueObservable,
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
@@ -155,7 +157,7 @@ class NilaiView extends GetView<NilaiController> {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 15, // Sedikit lebih kecil
+            fontSize: 15,
             fontWeight: FontWeight.w500,
             color: Colors.black87,
           ),
@@ -163,14 +165,15 @@ class NilaiView extends GetView<NilaiController> {
         const SizedBox(height: 8),
         Obx(
           () => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // Sesuaikan padding vertikal
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[350]!), // Border lebih jelas
+              border: Border.all(color: Colors.grey[350]!),
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: value.value,
+                value: items.contains(valueObservable.value) ? valueObservable.value : null,
+                hint: Text("Pilih $label", style: const TextStyle(fontSize: 14, color: Colors.grey)),
                 isExpanded: true,
                 icon: Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
                 items: items.map((String itemValue) {
@@ -188,17 +191,62 @@ class NilaiView extends GetView<NilaiController> {
     );
   }
 
+  Widget _buildCalculatedMetricSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Obx(() {
+        if (controller.isLoading.value) {
+          return const SizedBox.shrink();
+        }
+        if (controller.displayedNilaiList.isEmpty && controller.errorMessage.value == null) {
+           return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withOpacity(0.3))),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'IPS:', // Label yang benar
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87),
+                  ),
+                  Text(
+                    controller.ipsSemester.value.toStringAsFixed(2), // Menampilkan nilai yang dihitung
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
   Widget _buildNilaiRow(String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 100, // Lebar label konsisten
+          width: 100,
           child: Text(
             label,
             style: const TextStyle(
               fontSize: 14,
-              color: Colors.black54, // Warna label lebih soft
+              color: Colors.black54,
               fontWeight: FontWeight.w500,
             ),
           ),

@@ -1,15 +1,17 @@
+// timelyu/data/services/nilai_service.dart
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:timelyu/data/models/nilai_model.dart';
+// Pastikan path ini benar dan BaseApiService serta ApiResponse terdefinisi di sana
 import 'package:timelyu/data/client/api_client.dart';
 
-class NilaiService extends BaseApiService { 
-
-// Fungsi untuk mendapatkan nilai
+class NilaiService extends BaseApiService {
+  // Fungsi untuk mendapatkan nilai
   Future<ApiResponse<List<NilaiModel>>> getNilai() async {
     try {
-      final token = await getToken();
+      final token = await getToken(); // Asumsi getToken() ada di BaseApiService atau di sini
       if (token == null || token.isEmpty) {
         return ApiResponse.error(
           "Autentikasi gagal: Token tidak ditemukan.",
@@ -18,8 +20,8 @@ class NilaiService extends BaseApiService {
       }
 
       final response = await http.get(
-        Uri.parse('${BaseApiService.baseUrl}/nilai'),
-        headers: getHeaders(requiresAuth: true, token: token),
+        Uri.parse('${BaseApiService.baseUrl}/nilai'), // Asumsi baseUrl ada di BaseApiService
+        headers: getHeaders(requiresAuth: true, token: token), // Asumsi getHeaders ada di BaseApiService
       );
 
       if (response.statusCode == HttpStatus.ok) {

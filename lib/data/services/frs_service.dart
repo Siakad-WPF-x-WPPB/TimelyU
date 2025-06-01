@@ -7,7 +7,6 @@ import 'package:timelyu/data/models/jadwal_matkul.model.dart';
 import 'package:timelyu/data/client/api_client.dart';
 
 class FrsService extends BaseApiService {
-
   // _parseTahunAjar tetap di sini karena spesifik untuk FRS
   Map<String, int> _parseTahunAjar(String tahunAjar) {
     try {
@@ -19,14 +18,15 @@ class FrsService extends BaseApiService {
         };
       }
     } catch (e) {
-      print("FrsService (_parseTahunAjar): Error parsing tahun ajar '$tahunAjar': $e");
+      print(
+        "FrsService (_parseTahunAjar): Error parsing tahun ajar '$tahunAjar': $e",
+      );
     }
     int currentYear = DateTime.now().year;
-    print("FrsService (_parseTahunAjar): Fallback, using $currentYear/${currentYear + 1}");
-    return {
-      'tahun_ajar': currentYear,
-      'tahun_berakhir': currentYear + 1,
-    };
+    print(
+      "FrsService (_parseTahunAjar): Fallback, using $currentYear/${currentYear + 1}",
+    );
+    return {'tahun_ajar': currentYear, 'tahun_berakhir': currentYear + 1};
   }
 
   /// Mengambil data FRS berdasarkan tahun ajar dan semester
@@ -36,7 +36,11 @@ class FrsService extends BaseApiService {
   }) async {
     try {
       final token = await getToken(); // Diwarisi
-      if (token == null) return ApiResponse.error('Token tidak ditemukan.', statusCode: HttpStatus.unauthorized);
+      if (token == null)
+        return ApiResponse.error(
+          'Token tidak ditemukan.',
+          statusCode: HttpStatus.unauthorized,
+        );
 
       final tahunData = _parseTahunAjar(tahunAjar);
       final queryParameters = <String, String>{
@@ -44,30 +48,50 @@ class FrsService extends BaseApiService {
         'semester': semester.toLowerCase(),
       };
 
-      final uri = Uri.parse('${BaseApiService.baseUrl}/frs').replace(queryParameters: queryParameters);
+      final uri = Uri.parse(
+        '${BaseApiService.baseUrl}/frs',
+      ).replace(queryParameters: queryParameters);
       print("FrsService (getFrsData): Calling URL - $uri");
       // Gunakan getHeaders() yang diwarisi
-      final response = await http.get(uri, headers: getHeaders(requiresAuth: true, token: token));
-      print("FrsService (getFrsData): Response Status - ${response.statusCode}");
+      final response = await http.get(
+        uri,
+        headers: getHeaders(requiresAuth: true, token: token),
+      );
+      print(
+        "FrsService (getFrsData): Response Status - ${response.statusCode}",
+      );
 
       if (response.statusCode == HttpStatus.ok) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['data'] != null && body['data'] is List) {
-          final List<FrsModel> frsList = (body['data'] as List)
-              .map((item) => FrsModel.fromJson(item as Map<String, dynamic>))
-              .toList();
+          final List<FrsModel> frsList =
+              (body['data'] as List)
+                  .map(
+                    (item) => FrsModel.fromJson(item as Map<String, dynamic>),
+                  )
+                  .toList();
           return ApiResponse.success(frsList, statusCode: response.statusCode);
         }
-        return ApiResponse.error('Format data FRS tidak valid dari API.', statusCode: response.statusCode);
+        return ApiResponse.error(
+          'Format data FRS tidak valid dari API.',
+          statusCode: response.statusCode,
+        );
       } else if (response.statusCode == HttpStatus.unauthorized) {
-        return ApiResponse.error('Sesi berakhir atau token tidak valid.', statusCode: response.statusCode);
+        return ApiResponse.error(
+          'Sesi berakhir atau token tidak valid.',
+          statusCode: response.statusCode,
+        );
       } else {
         String msg = 'Gagal mengambil data FRS.';
-        try { msg = jsonDecode(response.body)['message'] ?? msg; } catch (_) {}
+        try {
+          msg = jsonDecode(response.body)['message'] ?? msg;
+        } catch (_) {}
         return ApiResponse.error(msg, statusCode: response.statusCode);
       }
     } on SocketException {
-      print("FrsService (getFrsData): SocketException - Tidak ada koneksi internet.");
+      print(
+        "FrsService (getFrsData): SocketException - Tidak ada koneksi internet.",
+      );
       return ApiResponse.error('Tidak ada koneksi internet.');
     } catch (e) {
       print("FrsService (getFrsData): Generic error - $e");
@@ -82,43 +106,77 @@ class FrsService extends BaseApiService {
   }) async {
     try {
       final token = await getToken(); // Diwarisi
-      if (token == null) return ApiResponse.error('Token tidak ditemukan.', statusCode: HttpStatus.unauthorized);
+      if (token == null)
+        return ApiResponse.error(
+          'Token tidak ditemukan.',
+          statusCode: HttpStatus.unauthorized,
+        );
 
       final queryParameters = <String, String>{};
-      if (tahunAjar != null && semester != null && tahunAjar.isNotEmpty && semester.isNotEmpty) {
+      if (tahunAjar != null &&
+          semester != null &&
+          tahunAjar.isNotEmpty &&
+          semester.isNotEmpty) {
         final tahunData = _parseTahunAjar(tahunAjar);
         queryParameters['semester'] = semester.toLowerCase();
         queryParameters['tahun_mulai'] = tahunData['tahun_ajar'].toString();
         queryParameters['tahun_akhir'] = tahunData['tahun_berakhir'].toString();
       } else {
-        print("FrsService (getJadwalPilihan): Tahun ajar atau semester tidak disediakan sepenuhnya.");
+        print(
+          "FrsService (getJadwalPilihan): Tahun ajar atau semester tidak disediakan sepenuhnya.",
+        );
       }
 
       // Gunakan BaseApiService.baseUrl
-      final uri = Uri.parse('${BaseApiService.baseUrl}/jadwal/available-for-frs').replace(queryParameters: queryParameters);
+      final uri = Uri.parse(
+        '${BaseApiService.baseUrl}/jadwal/available-for-frs',
+      ).replace(queryParameters: queryParameters);
       print("FrsService (getJadwalPilihan): Calling URL - $uri");
       // Gunakan getHeaders() yang diwarisi
-      final response = await http.get(uri, headers: getHeaders(requiresAuth: true, token: token));
-      print("FrsService (getJadwalPilihan): Response Status - ${response.statusCode}");
+      final response = await http.get(
+        uri,
+        headers: getHeaders(requiresAuth: true, token: token),
+      );
+      print(
+        "FrsService (getJadwalPilihan): Response Status - ${response.statusCode}",
+      );
 
       if (response.statusCode == HttpStatus.ok) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['data'] != null && body['data'] is List) {
-          final List<JadwalMatakuliahModel> jadwalList = (body['data'] as List)
-              .map((item) => JadwalMatakuliahModel.fromJson(item as Map<String, dynamic>))
-              .toList();
-          return ApiResponse.success(jadwalList, statusCode: response.statusCode);
+          final List<JadwalMatakuliahModel> jadwalList =
+              (body['data'] as List)
+                  .map(
+                    (item) => JadwalMatakuliahModel.fromJson(
+                      item as Map<String, dynamic>,
+                    ),
+                  )
+                  .toList();
+          return ApiResponse.success(
+            jadwalList,
+            statusCode: response.statusCode,
+          );
         }
-        return ApiResponse.error('Format data jadwal tidak valid dari API.', statusCode: response.statusCode);
+        return ApiResponse.error(
+          'Format data jadwal tidak valid dari API.',
+          statusCode: response.statusCode,
+        );
       } else if (response.statusCode == HttpStatus.unauthorized) {
-        return ApiResponse.error('Sesi berakhir atau token tidak valid.', statusCode: response.statusCode);
+        return ApiResponse.error(
+          'Sesi berakhir atau token tidak valid.',
+          statusCode: response.statusCode,
+        );
       } else {
         String msg = 'Gagal mengambil data jadwal pilihan.';
-        try { msg = jsonDecode(response.body)['message'] ?? msg; } catch (_) {}
+        try {
+          msg = jsonDecode(response.body)['message'] ?? msg;
+        } catch (_) {}
         return ApiResponse.error(msg, statusCode: response.statusCode);
       }
     } on SocketException {
-      print("FrsService (getJadwalPilihan): SocketException - Tidak ada koneksi internet.");
+      print(
+        "FrsService (getJadwalPilihan): SocketException - Tidak ada koneksi internet.",
+      );
       return ApiResponse.error('Tidak ada koneksi internet.');
     } catch (e) {
       print("FrsService (getJadwalPilihan): Generic error - $e");
@@ -134,7 +192,11 @@ class FrsService extends BaseApiService {
   }) async {
     try {
       final token = await getToken(); // Diwarisi
-      if (token == null) return ApiResponse.error('Token tidak ditemukan.', statusCode: HttpStatus.unauthorized);
+      if (token == null)
+        return ApiResponse.error(
+          'Token tidak ditemukan.',
+          statusCode: HttpStatus.unauthorized,
+        );
 
       final tahunData = _parseTahunAjar(tahunAjar);
       final Map<String, dynamic> requestBody = {
@@ -147,25 +209,51 @@ class FrsService extends BaseApiService {
       print("FrsService (storeFrs): Calling URL - $uri");
       print("FrsService (storeFrs): Request Body - ${jsonEncode(requestBody)}");
       // Gunakan getHeaders() yang diwarisi
-      final response = await http.post(uri, headers: getHeaders(requiresAuth: true, token: token), body: jsonEncode(requestBody));
+      final response = await http.post(
+        uri,
+        headers: getHeaders(requiresAuth: true, token: token),
+        body: jsonEncode(requestBody),
+      );
       print("FrsService (storeFrs): Response Status - ${response.statusCode}");
 
-      if (response.statusCode == HttpStatus.created || response.statusCode == HttpStatus.ok) {
+      if (response.statusCode == HttpStatus.created ||
+          response.statusCode == HttpStatus.ok) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         final String? message = body['message'] as String?;
 
         if (body['data'] != null && body['data'] is List) {
-          final List<FrsModel> createdFrsList = (body['data'] as List)
-              .map((item) => FrsModel.fromJson(item as Map<String, dynamic>))
-              .toList();
-          return ApiResponse.success(createdFrsList, message: message ?? "FRS berhasil disimpan.", statusCode: response.statusCode);
-        } else if (body['data'] != null && body['data'] is Map<String,dynamic>) {
-            final FrsModel createdFrs = FrsModel.fromJson(body['data'] as Map<String,dynamic>);
-            return ApiResponse.success([createdFrs], message: message ?? "FRS berhasil disimpan.", statusCode: response.statusCode);
+          final List<FrsModel> createdFrsList =
+              (body['data'] as List)
+                  .map(
+                    (item) => FrsModel.fromJson(item as Map<String, dynamic>),
+                  )
+                  .toList();
+          return ApiResponse.success(
+            createdFrsList,
+            message: message ?? "FRS berhasil disimpan.",
+            statusCode: response.statusCode,
+          );
+        } else if (body['data'] != null &&
+            body['data'] is Map<String, dynamic>) {
+          final FrsModel createdFrs = FrsModel.fromJson(
+            body['data'] as Map<String, dynamic>,
+          );
+          return ApiResponse.success(
+            [createdFrs],
+            message: message ?? "FRS berhasil disimpan.",
+            statusCode: response.statusCode,
+          );
         }
-        return ApiResponse.success(<FrsModel>[], message: message ?? 'FRS berhasil disimpan.', statusCode: response.statusCode);
+        return ApiResponse.success(
+          <FrsModel>[],
+          message: message ?? 'FRS berhasil disimpan.',
+          statusCode: response.statusCode,
+        );
       } else if (response.statusCode == HttpStatus.unauthorized) {
-        return ApiResponse.error('Sesi berakhir atau token tidak valid.', statusCode: response.statusCode);
+        return ApiResponse.error(
+          'Sesi berakhir atau token tidak valid.',
+          statusCode: response.statusCode,
+        );
       } else if (response.statusCode == HttpStatus.unprocessableEntity) {
         final Map<String, dynamic> errorBody = jsonDecode(response.body);
         return ApiResponse.error(
@@ -175,11 +263,15 @@ class FrsService extends BaseApiService {
         );
       } else {
         String msg = 'Gagal menyimpan FRS.';
-        try { msg = jsonDecode(response.body)['message'] ?? msg; } catch (_) {}
+        try {
+          msg = jsonDecode(response.body)['message'] ?? msg;
+        } catch (_) {}
         return ApiResponse.error(msg, statusCode: response.statusCode);
       }
     } on SocketException {
-      print("FrsService (storeFrs): SocketException - Tidak ada koneksi internet.");
+      print(
+        "FrsService (storeFrs): SocketException - Tidak ada koneksi internet.",
+      );
       return ApiResponse.error('Tidak ada koneksi internet.');
     } catch (e) {
       print("FrsService (storeFrs): Generic error - $e");

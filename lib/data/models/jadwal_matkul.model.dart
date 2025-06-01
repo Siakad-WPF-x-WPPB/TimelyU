@@ -1,7 +1,7 @@
-// data/models/jadwal_matakuliah_model.dart
+// data/models/jadwal_matkul_model.dart
 
 class JadwalMatakuliahModel {
-  final String idJadwal;
+  final String idJadwal; // KUNCI: Harus cocok dengan FrsModel.idJadwalAsal
   final String namaMatakuliah;
   final String hari;
   final String jamMulai;
@@ -23,20 +23,20 @@ class JadwalMatakuliahModel {
 
   factory JadwalMatakuliahModel.fromJson(Map<String, dynamic> json) {
     return JadwalMatakuliahModel(
-      idJadwal: json['id'] as String? ?? '', // Dari JSON: "id"
-      namaMatakuliah: json['matakuliah'] as String? ?? '', // Dari JSON: "matakuliah"
+      idJadwal: json['id'] as String? ?? '', 
+      namaMatakuliah: json['matakuliah'] as String? ?? '', 
       hari: json['hari'] as String? ?? '',
       jamMulai: json['jam_mulai'] as String? ?? '',
       jamSelesai: json['jam_selesai'] as String? ?? '',
       ruangan: json['ruangan'] as String? ?? '',
-      namaDosen: json['dosen'] as String? ?? '', // Dari JSON: "dosen"
+      namaDosen: json['dosen'] as String? ?? '', 
       kelas: json['kelas'] as String? ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': idJadwal, // Konsisten dengan pembacaan dari 'id'
+      'id': idJadwal, 
       'matakuliah': namaMatakuliah,
       'hari': hari,
       'jam_mulai': jamMulai,

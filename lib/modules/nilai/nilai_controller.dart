@@ -1,50 +1,101 @@
+// timelyu/modules/nilai/nilai_controller.dart
+
 import 'package:get/get.dart';
 import 'package:timelyu/data/models/nilai_model.dart';
 import 'package:timelyu/data/services/nilai_service.dart';
 
 class NilaiController extends GetxController {
-  // Service
   final NilaiService _nilaiService = NilaiService();
 
-  // Observable variables untuk filter
   var selectedTahunAjaran = '2024/2025'.obs;
   var selectedSemester = 'Genap'.obs;
 
-
-  final List<String> tahunAjaranList = ['2025/2026','2024/2025', '2023/2024', '2022/2023', '2017/2018']; // Tambahkan 2017/2018 sesuai data API contoh
+  final List<String> tahunAjaranList = ['2025/2026', '2024/2025', '2023/2024', '2022/2023', '2017/2018'];
   final List<String> semesterList = ['Genap', 'Ganjil'];
 
-  // State untuk data, loading, dan error
-  var allNilaiList = <NilaiModel>[].obs;         // Menyimpan semua data nilai dari API
-  var displayedNilaiList = <NilaiModel>[].obs; // Menyimpan data nilai yang akan ditampilkan setelah filter
+  var allNilaiList = <NilaiModel>[].obs;
+  var displayedNilaiList = <NilaiModel>[].obs;
   var isLoading = true.obs;
-  var errorMessage = RxnString(); // RxnString agar bisa null
+  var errorMessage = RxnString();
+  // Variabel ini sekarang akan menyimpan Rata-Rata Bobot Nilai Semester
+  var ipsSemester = 0.0.obs;
 
   @override
   void onInit() {
     super.onInit();
-    fetchNilai(); // Ambil data saat controller diinisialisasi
+    // Set nilai awal filter agar tidak null jika memungkinkan
+    if (tahunAjaranList.isNotEmpty) {
+      selectedTahunAjaran.value = tahunAjaranList.first;
+    }
+    if (semesterList.isNotEmpty) {
+      selectedSemester.value = semesterList.first;
+    }
+    fetchNilai();
   }
 
-  // Method untuk mengambil data nilai dari service
   Future<void> fetchNilai() async {
     try {
       isLoading(true);
-      errorMessage.value = null; // Reset error message
+      errorMessage.value = null;
       final response = await _nilaiService.getNilai();
 
       if (response.success && response.data != null) {
         allNilaiList.assignAll(response.data!);
-        _applyFilters(); // Terapkan filter setelah data berhasil diambil
+        _applyFilters();
       } else {
         errorMessage.value = response.message ?? "Gagal mengambil data nilai.";
+        displayedNilaiList.clear();
+        _calculateMetric(); // Hitung metrik (akan jadi 0 jika list kosong)
       }
     } catch (e) {
       print("Error fetching nilai: $e");
       errorMessage.value = "Terjadi kesalahan saat mengambil data: ${e.toString()}";
+      displayedNilaiList.clear();
+      _calculateMetric();
     } finally {
       isLoading(false);
     }
+  }
+
+  double _getBobotNilai(String nilaiHuruf) {
+    switch (nilaiHuruf.toUpperCase()) {
+      case 'A': return 4.0;
+      case 'A-': return 3.75; // Sesuaikan dengan skema nilai Anda
+      case 'AB': return 3.5;
+      case 'B+': return 3.25;
+      case 'B': return 3.0;
+      case 'B-': return 2.75;
+      case 'BC': return 2.5;
+      case 'C+': return 2.25;
+      case 'C': return 2.0;
+      case 'D': return 1.0;
+      case 'E': return 0.0;
+      default: return 0.0;
+    }
+  }
+
+  // Menghitung Rata-Rata Bobot Nilai Semester (BUKAN IPS)
+  void _calculateMetric() {
+    if (displayedNilaiList.isEmpty) {
+      ipsSemester.value = 0.0;
+      return;
+    }
+
+    double totalBobotNilai = 0;
+    int jumlahMataKuliah = 0;
+
+    for (var nilaiItem in displayedNilaiList) {
+      totalBobotNilai += _getBobotNilai(nilaiItem.nilaiHuruf);
+      jumlahMataKuliah++;
+    }
+
+    if (jumlahMataKuliah == 0) {
+      ipsSemester.value = 0.0;
+    } else {
+      double rataRataBobot = totalBobotNilai / jumlahMataKuliah;
+      ipsSemester.value = double.parse(rataRataBobot.toStringAsFixed(2)).clamp(0.0, 4.0);
+    }
+     // print("Rata-Rata Bobot Nilai Semester dihitung: ${ipsSemester.value}");
   }
 
   void _applyFilters() {
@@ -59,33 +110,33 @@ class NilaiController extends GetxController {
     final semester = selectedSemester.value;
 
     if (startYear == null || endYear == null) {
-      // Jika tahun ajaran tidak valid, tampilkan semua (atau kosongkan, sesuai kebutuhan)
       displayedNilaiList.assignAll(allNilaiList.where((nilai) =>
         nilai.semester.toLowerCase() == semester.toLowerCase()
       ).toList());
-      return;
+    } else {
+      displayedNilaiList.assignAll(allNilaiList.where((nilai) {
+        bool tahunMatch = (nilai.tahunMulai == startYear && nilai.tahunAkhir == endYear);
+        bool semesterMatch = nilai.semester.toLowerCase() == semester.toLowerCase();
+        return tahunMatch && semesterMatch;
+      }).toList());
     }
-    
-    // Filter data berdasarkan tahun ajaran dan semester
-    displayedNilaiList.assignAll(allNilaiList.where((nilai) {
-      bool tahunMatch = (nilai.tahunMulai == startYear && nilai.tahunAkhir == endYear);
-      bool semesterMatch = nilai.semester.toLowerCase() == semester.toLowerCase();
-      return tahunMatch && semesterMatch;
-    }).toList());
+    _calculateMetric();
   }
 
-  // Methods untuk update filter dan terapkan ulang
   void updateTahunAjaran(String value) {
-    selectedTahunAjaran.value = value;
-    _applyFilters();
+    if (tahunAjaranList.contains(value)) {
+      selectedTahunAjaran.value = value;
+      _applyFilters();
+    }
   }
 
   void updateSemester(String value) {
-    selectedSemester.value = value;
-    _applyFilters();
+     if (semesterList.contains(value)) {
+      selectedSemester.value = value;
+      _applyFilters();
+    }
   }
 
-  // Metode onReady dan onClose bisa tetap ada jika ada penggunaan lain
   @override
   void onReady() {
     super.onReady();

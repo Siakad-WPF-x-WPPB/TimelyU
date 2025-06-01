@@ -47,7 +47,7 @@ class ApiResponse<T> {
 
 class BaseApiService {
   // Gunakan IP address yang benar atau domain
-  static const String baseUrl = "http://192.168.18.40:8000/api/mahasiswa";
+  static const String baseUrl = "http://192.168.100.54:8000/api/mahasiswa";
   static const String tokenKey = 'auth_token';
 
 

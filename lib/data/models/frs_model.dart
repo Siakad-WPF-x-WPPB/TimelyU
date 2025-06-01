@@ -2,7 +2,7 @@
 
 class FrsModel {
   final String id; // ID unik untuk item FRS ini
-  final String? idJadwalAsal;
+  final String? idJadwalAsal; // KUNCI: Harus cocok dengan JadwalMatakuliahModel.idJadwal
   final String status;
   final String hari;
   final String jamMulai;
@@ -13,9 +13,9 @@ class FrsModel {
   final String namaDosen;
   final String kelas;
   final String ruangan;
-  final int tahunAjar; // Tahun akademik FRS ini berlaku (misal 2023 untuk periode 2023/2024)
-  final int tahunBerakhir; // Tahun akademik FRS ini berakhir (misal 2024 untuk periode 2023/2024)
-  final String semester;
+  final int tahunAjar; // KUNCI: Harus integer tahun mulai (misal 2023 untuk 2023/2024)
+  final int tahunBerakhir;
+  final String semester; // KUNCI: Harus string (misal "Genap", "Ganjil")
 
   FrsModel({
     required this.id,
@@ -35,6 +35,25 @@ class FrsModel {
     required this.semester,
   });
 
+  // Helper untuk parsing tahun ajar dari string "YYYY/YYYY"
+  static Map<String, int?> _parseTahunAjarStringFormat(String? tahunAjarStr) {
+    if (tahunAjarStr == null || tahunAjarStr.isEmpty) {
+      return {'tahun_ajar': null, 'tahun_berakhir': null};
+    }
+    try {
+      List<String> parts = tahunAjarStr.split('/');
+      if (parts.length == 2) {
+        return {
+          'tahun_ajar': int.tryParse(parts[0]),
+          'tahun_berakhir': int.tryParse(parts[1]),
+        };
+      }
+    } catch (e) {
+      print("FrsModel (_parseTahunAjarStringFormat): Error parsing '$tahunAjarStr': $e");
+    }
+    return {'tahun_ajar': null, 'tahun_berakhir': null};
+  }
+
   factory FrsModel.fromJson(Map<String, dynamic> json) {
     // Helper untuk mengambil nilai integer dari field yang mungkin berupa int atau Map
     int? _parseIntFromDynamic(dynamic value, {String keyInMap = 'value'}) {
@@ -43,32 +62,44 @@ class FrsModel {
       } else if (value is String) {
         return int.tryParse(value);
       } else if (value is Map<String, dynamic> && value.containsKey(keyInMap) && value[keyInMap] is int) {
-        // Asumsikan struktur map adalah {keyInMap: int}, default keyInMap adalah 'value'
         return value[keyInMap] as int?;
       } else if (value is Map<String, dynamic> && value.containsKey(keyInMap) && value[keyInMap] is String) {
-        // Juga tangani jika value di dalam map adalah String angka
         return int.tryParse(value[keyInMap] as String);
       }
       return null;
     }
 
-    int? parsedTahunAjar = _parseIntFromDynamic(json['tahun_ajar']);
-    int? parsedTahunBerakhir = _parseIntFromDynamic(json['tahun_berakhir']);
+    int? parsedTahunAjar;
+    int? parsedTahunBerakhir;
+    dynamic tahunAjarJsonValue = json['tahun_ajar'];
+
+    if (tahunAjarJsonValue is String && tahunAjarJsonValue.contains('/')) {
+      // Jika API mengirim "tahun_ajar" sebagai "YYYY/YYYY"
+      Map<String, int?> parsedYears = _parseTahunAjarStringFormat(tahunAjarJsonValue);
+      parsedTahunAjar = parsedYears['tahun_ajar'];
+      parsedTahunBerakhir = parsedYears['tahun_berakhir'];
+    } else {
+      // Jika API mengirim "tahun_ajar" sebagai integer atau string angka
+      parsedTahunAjar = _parseIntFromDynamic(tahunAjarJsonValue);
+      // Jika API mengirim "tahun_berakhir" secara terpisah (opsional)
+      if (json.containsKey('tahun_berakhir')) {
+         parsedTahunBerakhir = _parseIntFromDynamic(json['tahun_berakhir']);
+      }
+    }
 
     // Fallback jika parsing gagal atau field tidak ada
+    // Penting: Sesuaikan fallback ini jika diperlukan. Menggunakan DateTime.now().year bisa berisiko jika data FRS untuk tahun yang sangat berbeda.
     int finalTahunAjar = parsedTahunAjar ?? DateTime.now().year;
-    int finalTahunBerakhir = parsedTahunBerakhir ?? (parsedTahunAjar ?? DateTime.now().year) + 1;
+    int finalTahunBerakhir = parsedTahunBerakhir ?? (finalTahunAjar + 1);
 
     // Pastikan tahun berakhir selalu lebih besar atau sama dengan tahun ajar
     if (finalTahunBerakhir < finalTahunAjar) {
-        finalTahunBerakhir = finalTahunAjar + 1;
+      finalTahunBerakhir = finalTahunAjar + 1;
     }
-
 
     return FrsModel(
       id: json['id'] as String? ?? '',
-      // Sesuaikan 'id_jadwal_asal' dengan nama field aktual dari API FRS Anda
-      idJadwalAsal: json['id_jadwal_asal'] as String? ?? json['jadwal_id'] as String?,
+      idJadwalAsal: json['id_jadwal_asal'] as String? ?? json['jadwal_id'] as String?, // SANGAT PENTING
       status: json['status'] as String? ?? 'pending',
       hari: json['hari'] as String? ?? '',
       jamMulai: json['jam_mulai'] as String? ?? '',
@@ -79,9 +110,9 @@ class FrsModel {
       namaDosen: json['nama_dosen'] as String? ?? json['dosen'] as String? ?? '',
       kelas: json['kelas'] as String? ?? '',
       ruangan: json['ruangan'] as String? ?? '',
-      tahunAjar: finalTahunAjar,
+      tahunAjar: finalTahunAjar, // SANGAT PENTING
       tahunBerakhir: finalTahunBerakhir,
-      semester: json['semester'] as String? ?? '',
+      semester: json['semester'] as String? ?? '', // SANGAT PENTING
     );
   }
 
@@ -103,11 +134,7 @@ class FrsModel {
       'semester': semester,
     };
     if (idJadwalAsal != null) {
-      // Biasanya tidak perlu mengirim balik idJadwalAsal saat update,
-      // kecuali API Anda secara spesifik memerlukannya.
-      // Untuk pembuatan baru (storeFrs), idJadwalAsal biasanya tidak dikirim dari client
-      // karena FRS dibuat berdasarkan pilihan jadwal, bukan dari FRS lain.
-      // data['id_jadwal_asal'] = idJadwalAsal;
+      // data['id_jadwal_asal'] = idJadwalAsal; // Biasanya tidak perlu mengirim ini kembali
     }
     return data;
   }
