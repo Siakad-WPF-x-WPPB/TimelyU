@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/data/models/schedule_today.dart';
 import 'package:timelyu/modules/schedule/full_schedule_view.dart';
-import 'package:timelyu/modules/schedule/today_schedule_controller.dart';
+import 'package:timelyu/modules/schedule/jadwal_hariIni_controller.dart';
 import 'package:timelyu/modules/schedule/jadwal_besok_controller.dart';
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 // Tambahkan import untuk notifikasi

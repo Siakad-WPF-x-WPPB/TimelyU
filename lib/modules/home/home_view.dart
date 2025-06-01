@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/modules/auth/auth_controller.dart';
 import 'package:timelyu/modules/home/home_controller.dart';
+// ⬇️ Import PengumumanController
+import 'package:timelyu/modules/home/pengumuman_controller.dart';
 import 'package:timelyu/modules/home/profile_view.dart';
+import 'package:timelyu/modules/schedule/jadwal_hariIni_controller.dart';
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
-import 'package:timelyu/modules/schedule/today_schedule_controller.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -16,12 +18,17 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   final AuthController _authController = Get.find<AuthController>();
   final HomeController _homeController = Get.put(HomeController());
+  // ⬇️ Tambahkan PengumumanController
+  final PengumumanController _pengumumanController = Get.put(
+    PengumumanController(),
+  );
   // Tambahkan controller untuk jadwal
   final ScheduleTodayController _todayScheduleController = Get.put(
     ScheduleTodayController(),
   );
 
   String _formatUserName(String fullName) {
+    // ... (fungsi _formatUserName tidak berubah) ...
     if (fullName.isEmpty) return "Pengguna";
     if (fullName.length <= 15) {
       return fullName;
@@ -32,6 +39,9 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
+    _homeController.fetchUpcomingTasks();
+    // ⬇️ Panggil fetchPengumuman saat view diinisialisasi
+    _pengumumanController.fetchPengumuman();
   }
 
   // Helper method untuk cek apakah waktu sekarang berada di antara start dan end time
@@ -545,8 +555,6 @@ class _HomeViewState extends State<HomeView> {
               }),
 
               SizedBox(height: Get.height * 0.03),
-
-              // *** Next Assignment Section (DINAMIS) ***
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -657,7 +665,7 @@ class _HomeViewState extends State<HomeView> {
 
               SizedBox(height: Get.height * 0.03),
 
-              // *** Announcement Section ***
+              // *** Announcement Section (DINAMIS) ***
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -668,34 +676,81 @@ class _HomeViewState extends State<HomeView> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  // Anda bisa membuat Icon ini mengarah ke halaman daftar pengumuman penuh nantinya
                   const Icon(Icons.chevron_right),
                 ],
               ),
               SizedBox(height: Get.height * 0.02),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.orange[100],
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: EdgeInsets.all(Get.width * 0.04),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Pengumuman Webinar Alumni",
-                      style: TextStyle(
-                        fontSize: Get.width < 400 ? 14 : 16,
-                        fontWeight: FontWeight.bold,
+              Obx(() {
+                // ⬇️ Bungkus dengan Obx untuk reaktivitas
+                if (_pengumumanController.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (_pengumumanController.errorMessage.value.isNotEmpty &&
+                    _pengumumanController.pengumumanList.isEmpty) {
+                  return Center(
+                    child: Text(_pengumumanController.errorMessage.value),
+                  );
+                }
+                if (_pengumumanController.pengumumanList.isEmpty) {
+                  return const Center(
+                    child: Text("Tidak ada pengumuman saat ini."),
+                  );
+                }
+                final pengumuman = _pengumumanController.pengumumanList.first;
+                return Container(
+                  width:
+                      double.infinity, // Agar container mengambil lebar penuh
+                  decoration: BoxDecoration(
+                    color: Colors.orange[100],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: EdgeInsets.all(Get.width * 0.04),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pengumuman.judul, // ⬅️ Data dinamis
+                        style: TextStyle(
+                          fontSize: Get.width < 400 ? 14 : 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: Get.height * 0.01),
-                    Text(
-                      "Akan ada webinar alumni pada tanggal 30 Mei 2025. Segera daftarkan diri Anda!",
-                      style: TextStyle(fontSize: Get.width < 400 ? 12 : 14),
-                    ),
-                  ],
-                ),
-              ),
+                      SizedBox(height: Get.height * 0.01),
+                      Text(
+                        pengumuman.isi, // ⬅️ Data dinamis
+                        style: TextStyle(fontSize: Get.width < 400 ? 12 : 14),
+                        maxLines:
+                            3, // Batasi jumlah baris jika isi terlalu panjang
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: Get.height * 0.01),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Oleh: ${pengumuman.namaPembuat}",
+                            style: TextStyle(
+                              fontSize: Get.width < 400 ? 10 : 12,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          Text(
+                            // Format tanggal jika perlu, atau tampilkan langsung
+                            _formatDisplayDate(pengumuman.tanggalDibuat),
+                            style: TextStyle(
+                              fontSize: Get.width < 400 ? 10 : 12,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
               SizedBox(height: Get.height * 0.02),
             ],
           ),
@@ -704,6 +759,14 @@ class _HomeViewState extends State<HomeView> {
       bottomNavigationBar: const TaskBottomNavigationBar(),
     );
   }
+
+  // Helper sederhana untuk format tanggal, bisa Anda kembangkan
+  String _formatDisplayDate(String apiDate) {
+    try {
+      final DateTime parsedDate = DateTime.parse(apiDate);
+      return "${parsedDate.day.toString().padLeft(2, '0')} ${['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][parsedDate.month - 1]} ${parsedDate.year}";
+    } catch (e) {
+      return apiDate; // Kembalikan tanggal asli jika parsing gagal
+    }
+  }
 }
-
-

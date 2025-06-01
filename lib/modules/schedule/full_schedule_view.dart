@@ -8,8 +8,6 @@ class FullScheduleView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use Get.put carefully. If already put by a route, use Get.find.
-    // For simplicity here, assuming it's the first time it's put for this screen.
     final FullScheduleController controller = Get.put(FullScheduleController());
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -18,17 +16,16 @@ class FullScheduleView extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Header with title and dropdowns (now observing controller data)
             Obx(() => _buildHeader(screenWidth, controller)),
-            
-            // Content jadwal berdasarkan hari
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (controller.errorMessage.value.isNotEmpty) {
-                  return Center(child: Text('Error: ${controller.errorMessage.value}'));
+                  return Center(
+                    child: Text('Error: ${controller.errorMessage.value}'),
+                  );
                 }
                 return _buildScheduleContent(controller, screenWidth);
               }),
@@ -50,7 +47,11 @@ class FullScheduleView extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.black,
+                  size: 24,
+                ),
                 onPressed: () => Get.back(),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -72,18 +73,20 @@ class FullScheduleView extends StatelessWidget {
               Expanded(
                 child: _buildDropdownField(
                   label: 'Tahun Ajar',
-                  value: controller.tahunAjarDisplay.value.isNotEmpty 
-                       ? controller.tahunAjarDisplay.value 
-                       : "Loading...", // Show loading or default
+                  value:
+                      controller.tahunAjarDisplay.value.isNotEmpty
+                          ? controller.tahunAjarDisplay.value
+                          : "Loading...", // Show loading or default
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: _buildDropdownField(
                   label: 'Semester',
-                  value: controller.semesterDisplay.value.isNotEmpty
-                       ? controller.semesterDisplay.value
-                       : "Loading...", // Show loading or default
+                  value:
+                      controller.semesterDisplay.value.isNotEmpty
+                          ? controller.semesterDisplay.value
+                          : "Loading...", // Show loading or default
                 ),
               ),
             ],
@@ -118,10 +121,7 @@ class FullScheduleView extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
               Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
             ],
@@ -131,35 +131,35 @@ class FullScheduleView extends StatelessWidget {
     );
   }
 
-  Widget _buildScheduleContent(FullScheduleController controller, double screenWidth) {
+  Widget _buildScheduleContent(
+    FullScheduleController controller,
+    double screenWidth,
+  ) {
     // Filter out days that have no schedules to display, unless you want to show all days from controller.days
-    List<String> daysWithSchedules = controller.days.where((day) {
-        final schedulesForDay = controller.scheduleData[day];
-        return schedulesForDay != null && schedulesForDay.isNotEmpty;
-    }).toList();
+    List<String> daysWithSchedules =
+        controller.days.where((day) {
+          final schedulesForDay = controller.scheduleData[day];
+          return schedulesForDay != null && schedulesForDay.isNotEmpty;
+        }).toList();
 
     if (daysWithSchedules.isEmpty && !controller.isLoading.value) {
-        return const Center(
-            child: Text(
-                'Tidak ada jadwal disetujui untuk ditampilkan.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-        );
+      return const Center(
+        child: Text(
+          'Tidak ada jadwal disetujui untuk ditampilkan.',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
     }
-
     return ListView.builder(
       padding: const EdgeInsets.all(20),
       itemCount: controller.days.length, // Iterate through all defined days
       itemBuilder: (context, index) {
         final day = controller.days[index];
         final schedulesForDay = controller.scheduleData[day] ?? [];
-        
-        // Optionally, only build section if there are schedules or if you want to show "Tidak ada jadwal"
-        // For this version, we'll build a section for every day in controller.days
-        // and let _buildDaySection handle the "Tidak ada jadwal" message internally.
-
         return Padding(
-          padding: EdgeInsets.only(bottom: index == controller.days.length - 1 ? 0 : 32),
+          padding: EdgeInsets.only(
+            bottom: index == controller.days.length - 1 ? 0 : 32,
+          ),
           child: _buildDaySection(day, schedulesForDay),
         );
       },
@@ -191,10 +191,7 @@ class FullScheduleView extends StatelessWidget {
             child: Center(
               child: Text(
                 'Tidak ada jadwal',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.grey[500], fontSize: 16),
               ),
             ),
           )
@@ -205,7 +202,6 @@ class FullScheduleView extends StatelessWidget {
   }
 
   Widget _buildScheduleCard(Map<String, dynamic> schedule) {
-    // The color logic remains the same, based on 'mataKuliah'
     Color cardColor;
     switch (schedule['mataKuliah'] as String? ?? '') {
       case 'Kecerdasan Buatan':
@@ -223,9 +219,6 @@ class FullScheduleView extends StatelessWidget {
       case 'Workshop Pengembangan Perangkat Lunak berbasis Agile':
         cardColor = const Color(0xFFFFF4E6);
         break;
-      // Add more cases if there are other specific course names from API
-      // that need custom colors and match your Figma design.
-      // Example from your API data:
       case 'Dasar Teknik Elektronika':
         cardColor = Colors.blue[100]!; // Example color
         break;
@@ -242,9 +235,12 @@ class FullScheduleView extends StatelessWidget {
         cardColor = Colors.teal[100]!; // Example color
         break;
       default:
-        // Fallback for courses not explicitly listed, or use a hash of the course name for variety
-        cardColor = Colors.primaries[((schedule['mataKuliah'] as String? ?? '').hashCode) % Colors.primaries.length].shade100;
-        // cardColor = Colors.grey[50]!; // Original default
+        cardColor =
+            Colors
+                .primaries[((schedule['mataKuliah'] as String? ?? '')
+                        .hashCode) %
+                    Colors.primaries.length]
+                .shade100;
     }
 
     return Container(
@@ -253,7 +249,6 @@ class FullScheduleView extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        // border: Border.all(color: Colors.grey[200]!), // Original border, can be kept or removed
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,14 +277,22 @@ class FullScheduleView extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.access_time_outlined, size: 16, color: Colors.grey[700]),
+              Icon(
+                Icons.access_time_outlined,
+                size: 16,
+                color: Colors.grey[700],
+              ),
               const SizedBox(width: 6),
               Text(
                 schedule['jamKuliah'] as String? ?? 'N/A',
                 style: TextStyle(fontSize: 14, color: Colors.grey[700]),
               ),
               const SizedBox(width: 24),
-              Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[700]),
+              Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: Colors.grey[700],
+              ),
               const SizedBox(width: 6),
               Text(
                 schedule['lokasi'] as String? ?? 'N/A',
