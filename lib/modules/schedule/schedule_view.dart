@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:timelyu/modules/schedule/full_schedule_view.dart'; // Untuk navigasi dari Jadwal Hari Ini
-import 'package:timelyu/modules/schedule/today_schedule_controller.dart';
-
-// ⬇️ Import controller untuk Jadwal Besok/Mendatang
-import 'package:timelyu/modules/schedule/jadwal_besok_controller.dart'; // Pastikan path ini benar
-
+import 'package:timelyu/modules/schedule/full_schedule_view.dart';
+import 'package:timelyu/modules/schedule/jadwal_hariIni_controller.dart';
+import 'package:timelyu/modules/schedule/jadwal_besok_controller.dart';
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 
 class ScheduleView extends StatefulWidget {
@@ -16,10 +13,8 @@ class ScheduleView extends StatefulWidget {
 }
 
 class _ScheduleViewState extends State<ScheduleView> {
-  // Controller untuk Jadwal Hari Ini
-  final ScheduleTodayController _todayScheduleController = Get.put(ScheduleTodayController());
-  
-  // ⬇️ Inisialisasi JadwalBesokController
+
+  final ScheduleTodayController _todayScheduleController = Get.put(ScheduleTodayController());  
   final JadwalBesokController _jadwalBesokController = Get.put(JadwalBesokController());
 
   final List<Color> _scheduleItemColors = [
@@ -71,7 +66,6 @@ class _ScheduleViewState extends State<ScheduleView> {
 
   // --- _kelasBerlangsungCard tetap statis ---
   Widget _kelasBerlangsungCard(double screenWidth) {
-    // ... (Implementasi _kelasBerlangsungCard Anda yang sudah ada)
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -234,9 +228,7 @@ class _ScheduleViewState extends State<ScheduleView> {
 
   // --- Implementasi _jadwalMendatang yang DINAMIS ---
   Widget _jadwalMendatang(double screenWidth) {
-    // Gunakan Obx untuk membuat widget reaktif terhadap JadwalBesokController
     return Obx(() {
-      // 1. Menampilkan Indikator Loading
       if (_jadwalBesokController.isLoading.value) {
         return const Center(child: Padding(
           padding: EdgeInsets.symmetric(vertical: 20.0),
@@ -289,7 +281,6 @@ class _ScheduleViewState extends State<ScheduleView> {
                 child: Text("Tidak ada jadwal mendatang."), // Atau "Tidak ada jadwal besok."
               ))
           else
-            // Membuat daftar item jadwal secara dinamis
             Column(
               children: List.generate(_jadwalBesokController.jadwalBesokList.length, (index) {
                 final item = _jadwalBesokController.jadwalBesokList[index];
@@ -299,8 +290,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                   pengajar: item['dosen'] ?? 'N/A',
                   jamKuliah: item['jamKuliah'] ?? 'N/A',
                   lokasi: item['ruang'] ?? 'N/A',
-                  // 'hari' juga ada di item['hari'] jika Anda ingin menampilkannya per item
-                  cardColor: _scheduleItemColors[(index + 2) % _scheduleItemColors.length], // Offset warna agar beda dari jadwal hari ini
+                  cardColor: _scheduleItemColors[(index + 2) % _scheduleItemColors.length], 
                 );
               }),
             ),
