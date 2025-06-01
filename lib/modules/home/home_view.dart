@@ -1,14 +1,10 @@
-// File: lib/modules/home/home_view.dart (Updated)
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/modules/auth/auth_controller.dart';
-import 'package:timelyu/modules/home/home_controller.dart'; // Import HomeController
+import 'package:timelyu/modules/home/home_controller.dart';
 import 'package:timelyu/modules/home/profile_view.dart';
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
-// Pastikan TaskModel diimpor jika diperlukan untuk type hinting,
-// meskipun data akan datang dari HomeController
-// import 'package:timelyu/data/models/task_model.dart';
+import 'package:timelyu/modules/schedule/today_schedule_controller.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -19,11 +15,13 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   final AuthController _authController = Get.find<AuthController>();
-  // Tambahkan HomeController
-  final HomeController _homeController = Get.put(HomeController()); // atau Get.find() jika sudah di-bind
+  final HomeController _homeController = Get.put(HomeController());
+  // Tambahkan controller untuk jadwal
+  final ScheduleTodayController _todayScheduleController = Get.put(
+    ScheduleTodayController(),
+  );
 
   String _formatUserName(String fullName) {
-    // ... (fungsi _formatUserName tidak berubah)
     if (fullName.isEmpty) return "Pengguna";
     if (fullName.length <= 15) {
       return fullName;
@@ -34,10 +32,74 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    // Panggil fetchUpcomingTasks saat view diinisialisasi
-    // Ini akan memastikan data dimuat bahkan jika onInit di controller sudah lewat
-    // atau jika view direbuild.
-    _homeController.fetchUpcomingTasks();
+  }
+
+  // Helper method untuk cek apakah waktu sekarang berada di antara start dan end time
+  bool _isTimeBetween(String current, String start, String end) {
+    try {
+      final currentMinutes = _timeToMinutes(current);
+      final startMinutes = _timeToMinutes(start);
+      final endMinutes = _timeToMinutes(end);
+
+      return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  int _timeToMinutes(String time) {
+    final parts = time.split(':');
+    return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+  }
+
+  // Helper method untuk mencari kelas berikutnya
+  Map<String, dynamic>? _findNextClass() {
+    final now = DateTime.now();
+    final currentTime =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final currentMinutes = _timeToMinutes(currentTime);
+
+    Map<String, dynamic>? nextClass;
+    int minTimeDiff = double.maxFinite.toInt();
+
+    for (final item in _todayScheduleController.todaySchedule) {
+      final waktu = item['waktu'] ?? '';
+      if (waktu.isNotEmpty) {
+        try {
+          final classMinutes = _timeToMinutes(waktu);
+          final timeDiff = classMinutes - currentMinutes;
+
+          if (timeDiff > 0 && timeDiff < minTimeDiff) {
+            minTimeDiff = timeDiff;
+            nextClass = item;
+          }
+        } catch (e) {
+          // Skip jika ada error parsing
+        }
+      }
+    }
+
+    return nextClass;
+  }
+
+  // Helper method untuk menghitung waktu hingga kelas berikutnya
+  String _getTimeUntilNext(String nextStartTime) {
+    try {
+      final now = DateTime.now();
+      final currentMinutes = now.hour * 60 + now.minute;
+      final nextMinutes = _timeToMinutes(nextStartTime);
+
+      final diffMinutes = nextMinutes - currentMinutes;
+
+      if (diffMinutes <= 0) return 'Segera';
+      if (diffMinutes < 60) return '${diffMinutes} menit lagi';
+
+      final hours = diffMinutes ~/ 60;
+      final minutes = diffMinutes % 60;
+      return '${hours}h ${minutes}m lagi';
+    } catch (e) {
+      return 'Segera';
+    }
   }
 
   @override
@@ -53,46 +115,47 @@ class _HomeViewState extends State<HomeView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // *** Header Section ***
-              // ... (Tidak ada perubahan di Header Section) ...
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded( 
+                  Expanded(
                     child: Obx(() {
-                      final fullUserName = _authController.user.value?.nama ?? "Pengguna";
+                      final fullUserName =
+                          _authController.user.value?.nama ?? "Pengguna";
                       final displayName = _formatUserName(fullUserName);
-                      final userNrp = _authController.user.value?.nrp ?? "Memuat...";
-                      
+                      final userNrp =
+                          _authController.user.value?.nrp ?? "Memuat...";
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           fullUserName.length > 15
-                            ? Tooltip(
+                              ? Tooltip(
                                 message: "Halo, $fullUserName!",
                                 child: Text(
                                   "Halo, $displayName",
                                   style: TextStyle(
-                                    fontSize: Get.width < 400 ? 20 : 24, 
+                                    fontSize: Get.width < 400 ? 20 : 24,
                                     fontWeight: FontWeight.bold,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),
                               )
-                            : Text(
+                              : Text(
                                 "Halo, $displayName!",
                                 style: TextStyle(
-                                  fontSize: Get.width < 400 ? 20 : 24, 
+                                  fontSize: Get.width < 400 ? 20 : 24,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                               ),
-                          SizedBox(height: Get.height * 0.005), 
+                          SizedBox(height: Get.height * 0.005),
                           Text(
-                            userNrp, 
+                            userNrp,
                             style: TextStyle(
-                              fontSize: Get.width < 400 ? 14 : 16, 
+                              fontSize: Get.width < 400 ? 14 : 16,
                               color: Colors.grey[600],
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -102,34 +165,32 @@ class _HomeViewState extends State<HomeView> {
                       );
                     }),
                   ),
-                  SizedBox(width: Get.width * 0.02), 
+                  SizedBox(width: Get.width * 0.02),
                   PopupMenuButton(
-                    icon: Icon(
-                      Icons.menu, 
-                      size: Get.width < 400 ? 28 : 32, 
-                    ),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 1,
-                        child: Row(
-                          children: [
-                            Icon(Icons.person, size: 18),
-                            SizedBox(width: 8),
-                            Text("Profile"),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 2,
-                        child: Row(
-                          children: [
-                            Icon(Icons.logout, size: 18),
-                            SizedBox(width: 8),
-                            Text("Logout"),
-                          ],
-                        ),
-                      ),
-                    ],
+                    icon: Icon(Icons.menu, size: Get.width < 400 ? 28 : 32),
+                    itemBuilder:
+                        (context) => [
+                          const PopupMenuItem(
+                            value: 1,
+                            child: Row(
+                              children: [
+                                Icon(Icons.person, size: 18),
+                                SizedBox(width: 8),
+                                Text("Profile"),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 2,
+                            child: Row(
+                              children: [
+                                Icon(Icons.logout, size: 18),
+                                SizedBox(width: 8),
+                                Text("Logout"),
+                              ],
+                            ),
+                          ),
+                        ],
                     onSelected: (value) {
                       if (value == 1) {
                         Get.to(() => ProfileView());
@@ -137,7 +198,9 @@ class _HomeViewState extends State<HomeView> {
                         Get.dialog(
                           AlertDialog(
                             title: const Text('Konfirmasi Logout'),
-                            content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+                            content: const Text(
+                              'Apakah Anda yakin ingin keluar dari aplikasi?',
+                            ),
                             actions: [
                               TextButton(
                                 onPressed: () => Get.back(),
@@ -164,167 +227,323 @@ class _HomeViewState extends State<HomeView> {
               ),
               SizedBox(height: Get.height * 0.03),
 
-              // *** Next Class Section ***
-              // ... (Tidak ada perubahan di Next Class Section) ...
-                Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
+              // *** Dynamic Class Section ***
+              Obx(() {
+                if (_todayScheduleController.isLoading.value) {
+                  return Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(Get.width * 0.04), 
+                    padding: EdgeInsets.all(Get.width * 0.04),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0056B3),
+                      color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Kelas saat ini",
-                          style: TextStyle(
-                            color: Colors.white, 
-                            fontSize: Get.width < 400 ? 12 : 14, 
-                          ),
-                        ),
-                        SizedBox(height: Get.height * 0.005),
-                        Text(
-                          "Kecerdasan Buatan", // Ini bisa dinamis juga nanti
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: Get.width < 400 ? 18 : 20, 
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: Get.height * 0.01),
-                        Row(
-                          children: [
-                            const Icon(Icons.person, size: 16, color: Colors.white),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                "Aliridho Barakbah", // Ini bisa dinamis juga nanti
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: Get.width < 400 ? 11 : 13, 
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: Get.height * 0.01),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              "13:00 - 16:20", // Ini bisa dinamis juga nanti
-                              style: TextStyle(
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                final now = DateTime.now();
+                final currentTime =
+                    '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+                // Cari kelas yang sedang berlangsung
+                final currentClass = _todayScheduleController.todaySchedule
+                    .firstWhereOrNull((item) {
+                      final jamKuliah = item['jamKuliah'] ?? '';
+                      if (jamKuliah.contains(' - ')) {
+                        final times = jamKuliah.split(' - ');
+                        final startTime = times[0].trim();
+                        final endTime = times[1].trim();
+                        return _isTimeBetween(currentTime, startTime, endTime);
+                      }
+                      return false;
+                    });
+
+                // Cari kelas berikutnya jika tidak ada kelas berlangsung
+                final nextClass =
+                    currentClass == null ? _findNextClass() : null;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Kelas Saat Ini atau Status
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(Get.width * 0.04),
+                      decoration: BoxDecoration(
+                        color:
+                            currentClass != null
+                                ? const Color(0xFF0056B3)
+                                : Colors.grey[400],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                currentClass != null
+                                    ? Icons.school
+                                    : Icons.schedule,
                                 color: Colors.white,
-                                fontSize: Get.width < 400 ? 11 : 13, 
+                                size: 20,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                "C 203", // Ini bisa dinamis juga nanti
+                              const SizedBox(width: 8),
+                              Text(
+                                currentClass != null
+                                    ? "Kelas saat ini"
+                                    : "Tidak ada kelas berlangsung",
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: Get.width < 400 ? 11 : 13, 
+                                  fontSize: Get.width < 400 ? 12 : 14,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
                               ),
+                              if (currentClass != null) ...[
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'LIVE',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          SizedBox(height: Get.height * 0.005),
+                          Text(
+                            currentClass != null
+                                ? (currentClass['mataKuliah'] ?? 'N/A')
+                                : "Tidak ada kelas yang sedang berlangsung",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: Get.width < 400 ? 18 : 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (currentClass != null) ...[
+                            SizedBox(height: Get.height * 0.01),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    currentClass['dosen'] ?? 'N/A',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: Get.width < 400 ? 11 : 13,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: Get.height * 0.01),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.access_time,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  currentClass['jamKuliah'] ?? 'N/A',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: Get.width < 400 ? 11 : 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    currentClass['ruang'] ?? 'N/A',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: Get.width < 400 ? 11 : 13,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: Get.height * 0.015), 
-                  Container(
-                    // ... (Container kelas selanjutnya tidak berubah) ...
-                     width: double.infinity,
-                    padding: EdgeInsets.all(Get.width * 0.04), // Responsive padding
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFC107),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Kelas selanjutnya",
-                          style: TextStyle(
-                            color: const Color(0xFF00296B),
-                            fontSize: Get.width < 400 ? 12 : 14, // Responsive font
-                          ),
-                        ),
-                        SizedBox(height: Get.height * 0.005),
-                        Text(
-                          "Workshop Pemrograman Berbasis Agile",
-                          style: TextStyle(
-                            color: const Color(0xFF00296B),
-                            fontSize: Get.width < 400 ? 18 : 20, // Responsive font
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: Get.height * 0.01),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time,
-                              size: 16,
-                              color: Color(0xFF00296B),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              "13:00 - 16:20",
-                              style: TextStyle(
-                                color: const Color(0xFF00296B),
-                                fontSize: Get.width < 400 ? 11 : 13, // Responsive font
+                    SizedBox(height: Get.height * 0.015),
+
+                    // Kelas Selanjutnya
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(Get.width * 0.04),
+                      decoration: BoxDecoration(
+                        color:
+                            nextClass != null
+                                ? const Color(0xFFFFC107)
+                                : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                nextClass != null
+                                    ? Icons.schedule
+                                    : Icons.event_busy,
+                                color:
+                                    nextClass != null
+                                        ? const Color(0xFF00296B)
+                                        : Colors.grey[600],
+                                size: 20,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: Color(0xFF00296B),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                "C 203",
+                              const SizedBox(width: 8),
+                              Text(
+                                nextClass != null
+                                    ? "Kelas selanjutnya"
+                                    : "Tidak ada kelas mendatang",
                                 style: TextStyle(
-                                  color: const Color(0xFF00296B),
-                                  fontSize: Get.width < 400 ? 11 : 13, // Responsive font
+                                  color:
+                                      nextClass != null
+                                          ? const Color(0xFF00296B)
+                                          : Colors.grey[600],
+                                  fontSize: Get.width < 400 ? 12 : 14,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
                               ),
+                              if (nextClass != null) ...[
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    _getTimeUntilNext(nextClass['waktu'] ?? ''),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          SizedBox(height: Get.height * 0.005),
+                          Text(
+                            nextClass != null
+                                ? (nextClass['mataKuliah'] ?? 'N/A')
+                                : "Tidak ada kelas yang dijadwalkan",
+                            style: TextStyle(
+                              color:
+                                  nextClass != null
+                                      ? const Color(0xFF00296B)
+                                      : Colors.grey[600],
+                              fontSize: Get.width < 400 ? 18 : 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (nextClass != null) ...[
+                            SizedBox(height: Get.height * 0.01),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Color(0xFF00296B),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    nextClass['dosen'] ?? 'N/A',
+                                    style: TextStyle(
+                                      color: const Color(0xFF00296B),
+                                      fontSize: Get.width < 400 ? 11 : 13,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: Get.height * 0.01),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.access_time,
+                                  size: 16,
+                                  color: Color(0xFF00296B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  nextClass['jamKuliah'] ?? 'N/A',
+                                  style: TextStyle(
+                                    color: const Color(0xFF00296B),
+                                    fontSize: Get.width < 400 ? 11 : 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: Color(0xFF00296B),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    nextClass['ruang'] ?? 'N/A',
+                                    style: TextStyle(
+                                      color: const Color(0xFF00296B),
+                                      fontSize: Get.width < 400 ? 11 : 13,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              }),
+
               SizedBox(height: Get.height * 0.03),
 
               // *** Next Assignment Section (DINAMIS) ***
@@ -338,11 +557,11 @@ class _HomeViewState extends State<HomeView> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Icon(Icons.chevron_right), 
+                  const Icon(Icons.chevron_right),
                 ],
               ),
               SizedBox(height: Get.height * 0.02),
-              Obx(() { // Obx untuk merebuild widget saat data berubah
+              Obx(() {
                 if (_homeController.isLoadingUpcomingTasks.value) {
                   return SizedBox(
                     height: Get.height * 0.18,
@@ -356,7 +575,10 @@ class _HomeViewState extends State<HomeView> {
                     child: Center(
                       child: Text(
                         "Tidak ada tugas mendatang.",
-                        style: TextStyle(fontSize: Get.width < 400 ? 12 : 14, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: Get.width < 400 ? 12 : 14,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   );
@@ -366,11 +588,9 @@ class _HomeViewState extends State<HomeView> {
                   height: Get.height * 0.18,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    // Gunakan panjang daftar dari controller
-                    itemCount: _homeController.upcomingTasks.length, 
+                    itemCount: _homeController.upcomingTasks.length,
                     itemBuilder: (context, index) {
-                      // Ambil data task dari controller
-                      final task = _homeController.upcomingTasks[index]; 
+                      final task = _homeController.upcomingTasks[index];
                       return Container(
                         width: Get.width * 0.75,
                         margin: EdgeInsets.only(right: Get.width * 0.04),
@@ -390,7 +610,7 @@ class _HomeViewState extends State<HomeView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              task.title, // Data dinamis
+                              task.title,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -400,7 +620,7 @@ class _HomeViewState extends State<HomeView> {
                             ),
                             SizedBox(height: Get.height * 0.005),
                             Text(
-                              task.description, // Data dinamis (biasanya ini nama mata kuliah/kategori)
+                              task.description,
                               style: TextStyle(
                                 fontSize: Get.width < 400 ? 11 : 13,
                                 color: Colors.grey,
@@ -418,7 +638,7 @@ class _HomeViewState extends State<HomeView> {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  task.date, // Data dinamis
+                                  task.date,
                                   style: TextStyle(
                                     fontSize: Get.width < 400 ? 10 : 12,
                                     color: Colors.grey,
@@ -438,43 +658,40 @@ class _HomeViewState extends State<HomeView> {
               SizedBox(height: Get.height * 0.03),
 
               // *** Announcement Section ***
-              // ... (Tidak ada perubahan di Announcement Section) ...
-                Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     "Pengumuman",
                     style: TextStyle(
-                      fontSize: Get.width < 400 ? 18 : 20, // Responsive font
+                      fontSize: Get.width < 400 ? 18 : 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const Icon(Icons.chevron_right),
                 ],
               ),
-              SizedBox(height: Get.height * 0.02), // Responsive spacing
+              SizedBox(height: Get.height * 0.02),
               Container(
                 decoration: BoxDecoration(
                   color: Colors.orange[100],
                   borderRadius: BorderRadius.circular(16),
                 ),
-                padding: EdgeInsets.all(Get.width * 0.04), // Responsive padding
+                padding: EdgeInsets.all(Get.width * 0.04),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "Pengumuman Webinar Alumni",
                       style: TextStyle(
-                        fontSize: Get.width < 400 ? 14 : 16, // Responsive font
+                        fontSize: Get.width < 400 ? 14 : 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: Get.height * 0.01),
                     Text(
                       "Akan ada webinar alumni pada tanggal 30 Mei 2025. Segera daftarkan diri Anda!",
-                      style: TextStyle(
-                        fontSize: Get.width < 400 ? 12 : 14, // Responsive font
-                      ),
+                      style: TextStyle(fontSize: Get.width < 400 ? 12 : 14),
                     ),
                   ],
                 ),
@@ -488,3 +705,5 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 }
+
+

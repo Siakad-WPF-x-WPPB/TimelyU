@@ -44,6 +44,44 @@ class ScheduleToday {
       'ruangan': ruang, // Menggunakan key 'ruangan' saat konversi ke JSON
     };
   }
+
+   // Tambahkan helper methods untuk notifikasi
+  DateTime get startDateTime {
+    final now = DateTime.now();
+    final timeParts = jamMulai.split(':');
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+    );
+  }
+
+  DateTime get endDateTime {
+    final now = DateTime.now();
+    final timeParts = jamSelesai.split(':');
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+    );
+  }
+
+  DateTime get notificationTime {
+    return startDateTime.subtract(const Duration(minutes: 30));
+  }
+
+  bool get canScheduleNotification {
+    final now = DateTime.now();
+    return notificationTime.isAfter(now);
+  }
+
+  int get notificationId {
+    return id != null ? int.tryParse(id!) ?? hashCode : hashCode;
+  }
 }
 
 class ScheduleListData {
@@ -69,4 +107,6 @@ class ScheduleListData {
       "data": data.map((item) => item.toJson()).toList(),
     };
   }
+  
 }
+

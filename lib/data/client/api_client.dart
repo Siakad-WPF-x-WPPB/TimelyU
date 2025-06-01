@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:shared_preferences/shared_preferences.dart'; // Untuk HttpStatus
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timelyu/data/models/schedule_today.dart';
+import 'package:timelyu/modules/notifacation/global_notification_manager.dart'; // Untuk HttpStatus
 
 class ApiResponse<T> {
   final bool success;
@@ -43,7 +47,7 @@ class ApiResponse<T> {
 
 class BaseApiService {
   // Gunakan IP address yang benar atau domain
-  static const String baseUrl = "http://192.168.100.54:8000/api/mahasiswa";
+  static const String baseUrl = "http://192.168.18.40:8000/api/mahasiswa";
   static const String tokenKey = 'auth_token';
 
 
@@ -65,5 +69,34 @@ class BaseApiService {
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(tokenKey, token);
+  }
+
+    Future<ApiResponse<ScheduleListData>> getTodaySchedule() async {
+    try {
+      final token = await getToken();
+      final headers = getHeaders(requiresAuth: true, token: token);
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/jadwal/today'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = ScheduleListData.fromJson(jsonDecode(response.body));
+
+        // Automatically update notifications for new schedule data
+        await GlobalNotificationManager.instance
+            .updateSchedulesAndNotifications(data.data);
+
+        return ApiResponse.success(data);
+      } else {
+        return ApiResponse.error(
+          'Failed to load schedule',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
   }
 }
