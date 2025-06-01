@@ -81,8 +81,7 @@ class FullScheduleController extends GetxController {
                 'mataKuliah': jadwal.matakuliah.nama,
                 'pengajar': jadwal.dosen.nama,
                 'jamKuliah': '${jadwal.jamMulai.substring(0, 5)} - ${jadwal.jamSelesai.substring(0, 5)}',
-                'lokasi': jadwal.ruangan.kode, // Or jadwal.ruangan.nama
-                // 'cardColor' will be handled by the view's switch statement
+                'lokasi': jadwal.ruangan.kode,
               });
             }
           }
@@ -106,12 +105,6 @@ class FullScheduleController extends GetxController {
   }
 
   String _normalizeDayName(String apiDayName) {
-    // API: "Jumat", "Rabu", "Selasa"
-    // Controller days: "Senin", "Selasa", ...
-    // This assumes API day names match the controller's day names in terms of capitalization and spelling.
-    // If not, add mapping logic here.
-    // For example, if API returns "senin" but controller uses "Senin":
-    // if (apiDayName.toLowerCase() == 'senin') return 'Senin';
     return apiDayName;
   }
 

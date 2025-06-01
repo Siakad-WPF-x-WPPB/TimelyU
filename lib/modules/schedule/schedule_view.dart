@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:timelyu/modules/schedule/full_schedule_view.dart';
+import 'package:timelyu/modules/schedule/full_schedule_view.dart'; // Untuk navigasi dari Jadwal Hari Ini
+import 'package:timelyu/modules/schedule/today_schedule_controller.dart';
+
+// ⬇️ Import controller untuk Jadwal Besok/Mendatang
+import 'package:timelyu/modules/schedule/jadwal_besok_controller.dart'; // Pastikan path ini benar
+
 import 'package:timelyu/shared/widgets/bottomNavigasi.dart';
 
 class ScheduleView extends StatefulWidget {
@@ -11,6 +16,22 @@ class ScheduleView extends StatefulWidget {
 }
 
 class _ScheduleViewState extends State<ScheduleView> {
+  // Controller untuk Jadwal Hari Ini
+  final ScheduleTodayController _todayScheduleController = Get.put(ScheduleTodayController());
+  
+  // ⬇️ Inisialisasi JadwalBesokController
+  final JadwalBesokController _jadwalBesokController = Get.put(JadwalBesokController());
+
+  final List<Color> _scheduleItemColors = [
+    Colors.purple.shade50,
+    Colors.green.shade50,
+    Colors.blue.shade50,
+    Colors.orange.shade50,
+    Colors.red.shade50,
+    Colors.teal.shade50,
+    Colors.pink.shade50,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -35,20 +56,22 @@ class _ScheduleViewState extends State<ScheduleView> {
                 ),
               ),
               const SizedBox(height: 20),
-              _kelasBerlangsungCard(screenWidth),
+              _kelasBerlangsungCard(screenWidth), // Masih statis
               const SizedBox(height: 30),
-              _jadwalHariIni(screenWidth),
+              _jadwalHariIni(screenWidth),       // Sudah dinamis
               const SizedBox(height: 30),
-              _jadwalMendatang(screenWidth),
+              _jadwalMendatang(screenWidth),   // Akan dibuat dinamis
             ],
           ),
         ),
       ),
-      bottomNavigationBar: TaskBottomNavigationBar(),
+      bottomNavigationBar: const TaskBottomNavigationBar(),
     );
   }
 
+  // --- _kelasBerlangsungCard tetap statis ---
   Widget _kelasBerlangsungCard(double screenWidth) {
+    // ... (Implementasi _kelasBerlangsungCard Anda yang sudah ada)
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -67,7 +90,7 @@ class _ScheduleViewState extends State<ScheduleView> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Kecerdasan Buatan',
+            'Kecerdasan Buatan', // Contoh data
             style: TextStyle(
               fontSize: screenWidth * 0.06,
               fontWeight: FontWeight.bold,
@@ -75,34 +98,34 @@ class _ScheduleViewState extends State<ScheduleView> {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.access_time, color: Colors.white, size: 16),
-              const SizedBox(width: 4),
-              const Text(
-                '13:00 - 16:20',
+              Icon(Icons.access_time, color: Colors.white, size: 16),
+              SizedBox(width: 4),
+              Text(
+                '13:00 - 16:20', // Contoh data
                 style: TextStyle(color: Colors.white),
               ),
-              const SizedBox(width: 12),
-              const Icon(Icons.location_on, color: Colors.white, size: 16),
-              const SizedBox(width: 4),
-              const Text('C 203', style: TextStyle(color: Colors.white)),
+              SizedBox(width: 12),
+              Icon(Icons.location_on, color: Colors.white, size: 16),
+              SizedBox(width: 4),
+              Text('C 203', style: TextStyle(color: Colors.white)), // Contoh data
             ],
           ),
           const SizedBox(height: 12),
-          Row(
+          const Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.white,
                 child: Icon(Icons.person, size: 32, color: Colors.black),
               ),
-              const SizedBox(width: 12),
-              const Column(
+              SizedBox(width: 12),
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Alirdho Barakbah',
+                    'Alirdho Barakbah', // Contoh data
                     style: TextStyle(color: Colors.white),
                   ),
                   Text('Pengajar', style: TextStyle(color: Colors.white70)),
@@ -115,93 +138,178 @@ class _ScheduleViewState extends State<ScheduleView> {
     );
   }
 
+  // --- _jadwalHariIni sudah dinamis (dari respons sebelumnya) ---
   Widget _jadwalHariIni(double screenWidth) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Jadwal Hari Ini',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                Text('Kamu mempunyai 2 kelas hari ini.'),
-              ],
-            ),
-            GestureDetector(onTap: () {
-              Get.to(const FullScheduleView());
-            },child: Icon(Icons.arrow_forward_ios)),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Column(
+    return Obx(() {
+      if (_todayScheduleController.isLoading.value) {
+        return const Center(child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20.0),
+          child: CircularProgressIndicator(),
+        ));
+      }
+      if (_todayScheduleController.errorMessage.value.isNotEmpty &&
+          _todayScheduleController.todaySchedule.isEmpty) {
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          verticalDirection: VerticalDirection.up,
           children: [
-            Column(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _jadwalItem(
-                  waktu: '08:00',
-                  mataKuliah: 'Kecerdasan Buatan',
-                  pengajar: 'Alirdho Barakbah',
-                  jamKuliah: '08:00 - 09:40',
-                  lokasi: 'HH 101',
-                  cardColor: Colors.purple.shade50,
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Jadwal Hari Ini',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                    ),
+                  ],
                 ),
-                _jadwalItem(
-                  waktu: '13:00',
-                  mataKuliah: 'Administrasi Basis Data',
-                  pengajar: 'Weny Mistarika Rahmawati',
-                  jamKuliah: '13:00 - 15:30',
-                  lokasi: 'C 105',
-                  cardColor: Colors.green.shade50,
-                ),
+                GestureDetector(
+                    onTap: () {
+                      Get.to(() => const FullScheduleView());
+                    },
+                    child: const Icon(Icons.arrow_forward_ios)),
               ],
             ),
+            const SizedBox(height: 20),
+            Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20.0),
+                  child: Text(_todayScheduleController.errorMessage.value),
+                )
+            ),
           ],
-        ),
-      ],
-    );
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _todayScheduleController.currentDayDisplay.value,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  ),
+                  Text(_todayScheduleController.todaySchedule.isEmpty && _todayScheduleController.errorMessage.value.isEmpty
+                      ? 'Tidak ada kelas hari ini.'
+                      : 'Kamu mempunyai ${_todayScheduleController.todaySchedule.length} kelas hari ini.'),
+                ],
+              ),
+              GestureDetector(
+                  onTap: () {
+                    Get.to(() => const FullScheduleView());
+                  },
+                  child: const Icon(Icons.arrow_forward_ios)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (_todayScheduleController.todaySchedule.isEmpty && _todayScheduleController.errorMessage.value.isEmpty)
+            const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.0),
+                  child: Text("Tidak ada jadwal untuk hari ini."),
+                ))
+          else
+            Column(
+              children: List.generate(_todayScheduleController.todaySchedule.length, (index) {
+                final item = _todayScheduleController.todaySchedule[index];
+                return _jadwalItem(
+                  waktu: item['waktu'] ?? 'N/A',
+                  mataKuliah: item['mataKuliah'] ?? 'N/A',
+                  pengajar: item['dosen'] ?? 'N/A',
+                  jamKuliah: item['jamKuliah'] ?? 'N/A',
+                  lokasi: item['ruang'] ?? 'N/A',
+                  cardColor: _scheduleItemColors[index % _scheduleItemColors.length],
+                );
+              }),
+            ),
+        ],
+      );
+    });
   }
 
+  // --- Implementasi _jadwalMendatang yang DINAMIS ---
   Widget _jadwalMendatang(double screenWidth) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Jadwal Mendatang',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        const Text('Kamu ada 1 kelas mendatang loh.'),
-        const SizedBox(height: 20),
-        Column(
+    // Gunakan Obx untuk membuat widget reaktif terhadap JadwalBesokController
+    return Obx(() {
+      // 1. Menampilkan Indikator Loading
+      if (_jadwalBesokController.isLoading.value) {
+        return const Center(child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20.0),
+          child: CircularProgressIndicator(),
+        ));
+      }
+
+      // 2. Menampilkan Pesan Error jika ada dan tidak ada data jadwal
+      if (_jadwalBesokController.errorMessage.value.isNotEmpty &&
+          _jadwalBesokController.jadwalBesokList.isEmpty) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _jadwalItem(
-              waktu: '08:00',
-              mataKuliah: 'Kecerdasan Buatan',
-              pengajar: 'Alirdho Barakbah',
-              jamKuliah: '08:00 - 09:40',
-              lokasi: 'HH 101',
-              cardColor: Colors.purple.shade50,
+            Text(
+              // Menggunakan judul dari controller
+              _jadwalBesokController.scheduleDayTitle.value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
-            _jadwalItem(
-              waktu: '13:00',
-              mataKuliah: 'Administrasi Basis Data',
-              pengajar: 'Weny Mistarika Rahmawati',
-              jamKuliah: '13:00 - 15:30',
-              lokasi: 'C 105',
-              cardColor: Colors.green.shade50,
+            // Tidak menampilkan jumlah kelas jika ada error utama
+            const SizedBox(height: 20),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20.0),
+                // Menampilkan pesan error dari controller
+                child: Text(_jadwalBesokController.errorMessage.value),
+              )
             ),
           ],
-        ),
-      ],
-    );
+        );
+      }
+
+      // 3. Menampilkan Data Jadwal jika berhasil dimuat
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            // Menggunakan judul dari controller
+            _jadwalBesokController.scheduleDayTitle.value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
+          Text(_jadwalBesokController.jadwalBesokList.isEmpty && _jadwalBesokController.errorMessage.value.isEmpty
+              ? 'Tidak ada kelas mendatang.' // Atau lebih spesifik "Tidak ada kelas besok."
+              : 'Kamu mempunyai ${_jadwalBesokController.jadwalBesokList.length} kelas mendatang.'),
+          const SizedBox(height: 20),
+          // Jika tidak ada jadwal (setelah fetch berhasil) dan tidak ada error message
+          if (_jadwalBesokController.jadwalBesokList.isEmpty && _jadwalBesokController.errorMessage.value.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20.0),
+                child: Text("Tidak ada jadwal mendatang."), // Atau "Tidak ada jadwal besok."
+              ))
+          else
+            // Membuat daftar item jadwal secara dinamis
+            Column(
+              children: List.generate(_jadwalBesokController.jadwalBesokList.length, (index) {
+                final item = _jadwalBesokController.jadwalBesokList[index];
+                return _jadwalItem(
+                  waktu: item['waktu'] ?? 'N/A',
+                  mataKuliah: item['mataKuliah'] ?? 'N/A',
+                  pengajar: item['dosen'] ?? 'N/A',
+                  jamKuliah: item['jamKuliah'] ?? 'N/A',
+                  lokasi: item['ruang'] ?? 'N/A',
+                  // 'hari' juga ada di item['hari'] jika Anda ingin menampilkannya per item
+                  cardColor: _scheduleItemColors[(index + 2) % _scheduleItemColors.length], // Offset warna agar beda dari jadwal hari ini
+                );
+              }),
+            ),
+        ],
+      );
+    });
   }
 
+  // --- _jadwalItem tetap sama ---
   Widget _jadwalItem({
     required String waktu,
     required String mataKuliah,
@@ -210,12 +318,12 @@ class _ScheduleViewState extends State<ScheduleView> {
     required String lokasi,
     required Color cardColor,
   }) {
+    // ... (Implementasi _jadwalItem Anda yang sudah ada)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Waktu di kiri
           SizedBox(
             width: 50,
             child: Text(
@@ -224,7 +332,6 @@ class _ScheduleViewState extends State<ScheduleView> {
             ),
           ),
           const SizedBox(width: 12),
-          // Card di kanan
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -238,25 +345,26 @@ class _ScheduleViewState extends State<ScheduleView> {
                   Text(
                     mataKuliah,
                     style: const TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.person, size: 16),
+                      const Icon(Icons.person, size: 16, color: Colors.black54),
                       const SizedBox(width: 4),
-                      Text(pengajar),
+                      Expanded(child: Text(pengajar, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black87))),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.access_time, size: 16),
+                      const Icon(Icons.access_time, size: 16, color: Colors.black54),
                       const SizedBox(width: 4),
-                      Text(jamKuliah),
+                      Text(jamKuliah, style: const TextStyle(color: Colors.black87)),
                       const SizedBox(width: 12),
-                      const Icon(Icons.location_on, size: 16),
+                      const Icon(Icons.location_on, size: 16, color: Colors.black54),
                       const SizedBox(width: 4),
-                      Text(lokasi),
+                      Expanded(child: Text(lokasi, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black87))),
                     ],
                   ),
                 ],
