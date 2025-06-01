@@ -66,11 +66,21 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  uses-material-design: true
+  fonts:
+    - family: Inter  # Nama ini yang akan Anda gunakan di kode
+      fonts:
+        - asset: assets/fonts/Inter_medium.ttf
+        - asset: assets/fonts/Inter_default.ttf
+          weight: 700
+        # Jika Anda punya variasi lain (misalnya bold, italic):
+        # - asset: fonts/MyCustomFont-Bold.ttf
+        #   weight: 700 # Angka untuk ketebalan (700 biasanya untuk bold)
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
-  uses-material-design: true
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -145,8 +145,9 @@ class _HomeViewState extends State<HomeView> {
                                 child: Text(
                                   "Halo, $displayName",
                                   style: TextStyle(
+                                    fontFamily: "Inter",
+                                    fontWeight: FontWeight.w700,
                                     fontSize: Get.width < 400 ? 20 : 24,
-                                    fontWeight: FontWeight.bold,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
@@ -155,8 +156,9 @@ class _HomeViewState extends State<HomeView> {
                               : Text(
                                 "Halo, $displayName!",
                                 style: TextStyle(
+                                  fontFamily: "Inter",
+                                  fontWeight: FontWeight.w700,
                                   fontSize: Get.width < 400 ? 20 : 24,
-                                  fontWeight: FontWeight.bold,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
@@ -165,6 +167,7 @@ class _HomeViewState extends State<HomeView> {
                           Text(
                             userNrp,
                             style: TextStyle(
+                              fontFamily: "Inter",
                               fontSize: Get.width < 400 ? 14 : 16,
                               color: Colors.grey[600],
                             ),

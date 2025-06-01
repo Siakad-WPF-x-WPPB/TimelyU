@@ -132,7 +132,7 @@ class FrsView extends GetView<FrsController> {
     } else {
       return FloatingActionButton(
         onPressed: () => Get.to(() => const FrsInputView()),
-        backgroundColor: AppColors.fabColor,
+        backgroundColor: Color.fromARGB(255, 0, 80, 157),
         child: Icon(PhosphorIcons.plusCircle(), color: Colors.white, size: 24),
         elevation: 4.0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -166,11 +166,20 @@ class FrsView extends GetView<FrsController> {
           return _buildNoPeriodState();
         }
 
-        if (controller.frsList.isEmpty) {
+        // Filter data FRS: hanya tampilkan yang pending dan disetujui
+        final filteredFrsList =
+            controller.frsList.where((frs) {
+              final status = frs.status.toLowerCase();
+              return status == 'pending' ||
+                  status == 'approved' ||
+                  status == 'disetujui';
+            }).toList();
+
+        if (filteredFrsList.isEmpty) {
           return _buildEmptyState(context);
         }
 
-        return _buildResponsiveFrsList();
+        return _buildResponsiveFrsList(filteredFrsList);
       },
     );
   }
@@ -232,7 +241,9 @@ class FrsView extends GetView<FrsController> {
     );
   }
 
-  Widget _buildResponsiveFrsList() {
+ Widget _buildResponsiveFrsList([List<FrsModel>? frsList]) {
+    final dataList = frsList ?? controller.frsList;
+
     if (isDesktop) {
       // Desktop: Grid layout untuk menampilkan lebih banyak cards
       return GridView.builder(
@@ -242,12 +253,9 @@ class FrsView extends GetView<FrsController> {
           mainAxisSpacing: 20,
           childAspectRatio: 2.2,
         ),
-        itemCount: controller.frsList.length,
+        itemCount: dataList.length,
         itemBuilder: (context, index) {
-          return _buildFrsCard(
-            context: context,
-            frsItem: controller.frsList[index],
-          );
+          return _buildFrsCard(context: context, frsItem: dataList[index]);
         },
       );
     } else if (isTablet) {
@@ -255,7 +263,7 @@ class FrsView extends GetView<FrsController> {
       return LayoutBuilder(
         builder: (context, constraints) {
           final isLandscape = constraints.maxWidth > constraints.maxHeight;
-          
+
           if (isLandscape) {
             // Landscape tablet: 2 columns
             return GridView.builder(
@@ -265,24 +273,24 @@ class FrsView extends GetView<FrsController> {
                 mainAxisSpacing: 16,
                 childAspectRatio: 2.0,
               ),
-              itemCount: controller.frsList.length,
+              itemCount: dataList.length,
               itemBuilder: (context, index) {
                 return _buildFrsCard(
                   context: context,
-                  frsItem: controller.frsList[index],
+                  frsItem: dataList[index],
                 );
               },
             );
           } else {
             // Portrait tablet: Single column
             return ListView.builder(
-              itemCount: controller.frsList.length,
+              itemCount: dataList.length,
               itemBuilder: (context, index) {
                 return Padding(
                   padding: EdgeInsets.only(bottom: Get.height * 0.02),
                   child: _buildFrsCard(
                     context: context,
-                    frsItem: controller.frsList[index],
+                    frsItem: dataList[index],
                   ),
                 );
               },
@@ -293,14 +301,11 @@ class FrsView extends GetView<FrsController> {
     } else {
       // Mobile: Single column list
       return ListView.builder(
-        itemCount: controller.frsList.length,
+        itemCount: dataList.length,
         itemBuilder: (context, index) {
           return Padding(
             padding: EdgeInsets.only(bottom: Get.height * 0.018),
-            child: _buildFrsCard(
-              context: context,
-              frsItem: controller.frsList[index],
-            ),
+            child: _buildFrsCard(context: context, frsItem: dataList[index]),
           );
         },
       );
@@ -375,28 +380,55 @@ class FrsView extends GetView<FrsController> {
     );
   }
 
-  Widget _buildFrsCard({required BuildContext context, required FrsModel frsItem}) {
-    String jamMulaiFormatted = frsItem.jamMulai.length >= 5
-        ? frsItem.jamMulai.substring(0, 5)
-        : frsItem.jamMulai;
-    String jamSelesaiFormatted = frsItem.jamSelesai.length >= 5
-        ? frsItem.jamSelesai.substring(0, 5)
-        : frsItem.jamSelesai;
+ Widget _buildFrsCard({
+    required BuildContext context,
+    required FrsModel frsItem,
+  }) {
+    String jamMulaiFormatted =
+        frsItem.jamMulai.length >= 5
+            ? frsItem.jamMulai.substring(0, 5)
+            : frsItem.jamMulai;
+    String jamSelesaiFormatted =
+        frsItem.jamSelesai.length >= 5
+            ? frsItem.jamSelesai.substring(0, 5)
+            : frsItem.jamSelesai;
     String jadwalLengkap =
         "${frsItem.hari.isNotEmpty ? frsItem.hari : 'N/A'}, $jamMulaiFormatted - $jamSelesaiFormatted";
 
     return Card(
-      elevation: isDesktop ? 4 : isTablet ? 3.5 : 3,
+      elevation:
+          isDesktop
+              ? 4
+              : isTablet
+              ? 3.5
+              : 3,
       margin: EdgeInsets.symmetric(
-        vertical: isDesktop ? 8 : isTablet ? 7 : 6,
+        vertical:
+            isDesktop
+                ? 8
+                : isTablet
+                ? 7
+                : 6,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isDesktop ? 16 : isTablet ? 14 : 12),
+        borderRadius: BorderRadius.circular(
+          isDesktop
+              ? 16
+              : isTablet
+              ? 14
+              : 12,
+        ),
       ),
       color: AppColors.cardBackground,
       shadowColor: Colors.grey.withOpacity(0.15),
       child: Padding(
-        padding: EdgeInsets.all(isDesktop ? 20 : isTablet ? 18 : 16),
+        padding: EdgeInsets.all(
+          isDesktop
+              ? 20
+              : isTablet
+              ? 18
+              : 16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -406,22 +438,76 @@ class FrsView extends GetView<FrsController> {
               children: [
                 Expanded(
                   child: Text(
-                    frsItem.namaMatakuliah.isNotEmpty 
-                        ? frsItem.namaMatakuliah 
+                    frsItem.namaMatakuliah.isNotEmpty
+                        ? frsItem.namaMatakuliah
                         : "Nama Mata Kuliah Tidak Tersedia",
                     style: TextStyle(
-                      fontSize: isDesktop ? 19 : isTablet ? 18 : 17,
+                      fontSize:
+                          isDesktop
+                              ? 19
+                              : isTablet
+                              ? 18
+                              : 17,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textTitle,
                     ),
                   ),
                 ),
-                SizedBox(width: isDesktop ? 16 : isTablet ? 12 : 8),
-                _buildStatusChip(frsItem.status),
+                SizedBox(
+                  width:
+                      isDesktop
+                          ? 16
+                          : isTablet
+                          ? 12
+                          : 8,
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildStatusChip(frsItem.status),
+                    SizedBox(width: 8),
+                    // Tombol hapus
+                    InkWell(
+                      onTap: () => _showDeleteConfirmation(context, frsItem),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: EdgeInsets.all(
+                          isDesktop
+                              ? 8
+                              : isTablet
+                              ? 7
+                              : 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          PhosphorIcons.trash(PhosphorIconsStyle.fill),
+                          size:
+                              isDesktop
+                                  ? 18
+                                  : isTablet
+                                  ? 17
+                                  : 16,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
+            // ...existing code... (rest of the card content remains the same)
             if (frsItem.tipeMatakuliah.isNotEmpty || frsItem.sks > 0) ...[
-              SizedBox(height: isDesktop ? 12 : isTablet ? 10 : 8),
+              SizedBox(
+                height:
+                    isDesktop
+                        ? 12
+                        : isTablet
+                        ? 10
+                        : 8,
+              ),
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
@@ -441,21 +527,42 @@ class FrsView extends GetView<FrsController> {
                 ],
               ),
             ],
-            SizedBox(height: isDesktop ? 20 : isTablet ? 16 : 12),
+            SizedBox(
+              height:
+                  isDesktop
+                      ? 20
+                      : isTablet
+                      ? 16
+                      : 12,
+            ),
             _buildCardInfoRow(
               PhosphorIcons.chalkboardTeacher(PhosphorIconsStyle.duotone),
-              frsItem.namaDosen.isNotEmpty 
-                  ? frsItem.namaDosen 
+              frsItem.namaDosen.isNotEmpty
+                  ? frsItem.namaDosen
                   : "Belum ada dosen pengampu",
               color: AppColors.primary,
             ),
-            SizedBox(height: isDesktop ? 14 : isTablet ? 12 : 10),
+            SizedBox(
+              height:
+                  isDesktop
+                      ? 14
+                      : isTablet
+                      ? 12
+                      : 10,
+            ),
             _buildCardInfoRow(
               PhosphorIcons.clock(PhosphorIconsStyle.duotone),
               jadwalLengkap,
               color: AppColors.accent,
             ),
-            SizedBox(height: isDesktop ? 14 : isTablet ? 12 : 10),
+            SizedBox(
+              height:
+                  isDesktop
+                      ? 14
+                      : isTablet
+                      ? 12
+                      : 10,
+            ),
             if (isDesktop || isTablet) ...[
               // Desktop/Tablet: Single row untuk kelas dan ruangan
               Row(
@@ -463,7 +570,9 @@ class FrsView extends GetView<FrsController> {
                   Expanded(
                     flex: 2,
                     child: _buildCardInfoRow(
-                      PhosphorIcons.identificationBadge(PhosphorIconsStyle.duotone),
+                      PhosphorIcons.identificationBadge(
+                        PhosphorIconsStyle.duotone,
+                      ),
                       'Kelas ${frsItem.kelas.isNotEmpty ? frsItem.kelas : "-"}',
                     ),
                   ),
@@ -472,8 +581,8 @@ class FrsView extends GetView<FrsController> {
                     flex: 3,
                     child: _buildCardInfoRow(
                       PhosphorIcons.mapPinLine(PhosphorIconsStyle.duotone),
-                      frsItem.ruangan.isNotEmpty 
-                          ? frsItem.ruangan 
+                      frsItem.ruangan.isNotEmpty
+                          ? frsItem.ruangan
                           : "Ruangan belum ditentukan",
                     ),
                   ),
@@ -488,8 +597,8 @@ class FrsView extends GetView<FrsController> {
               const SizedBox(height: 10),
               _buildCardInfoRow(
                 PhosphorIcons.mapPinLine(PhosphorIconsStyle.duotone),
-                frsItem.ruangan.isNotEmpty 
-                    ? frsItem.ruangan 
+                frsItem.ruangan.isNotEmpty
+                    ? frsItem.ruangan
                     : "Ruangan belum ditentukan",
               ),
             ],
@@ -601,6 +710,102 @@ class FrsView extends GetView<FrsController> {
           ),
         ),
       ],
+    );
+  }
+  void _showDeleteConfirmation(BuildContext context, FrsModel frsItem) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              PhosphorIcons.warning(PhosphorIconsStyle.fill),
+              color: Colors.orange,
+              size: 24,
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Konfirmasi Hapus',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin ingin menghapus FRS untuk mata kuliah:',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 8),
+            Text(
+              frsItem.namaMatakuliah,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Tindakan ini tidak dapat dibatalkan.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.red,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Batal',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Obx(
+            () => ElevatedButton(
+              onPressed:
+                  controller.isLoadingFrs.value
+                      ? null
+                      : () {
+                        Get.back();
+                        controller.deleteFrs(frsItem.id);
+                      },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child:
+                  controller.isLoadingFrs.value
+                      ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                      : Text(
+                        'Hapus',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
     );
   }
 }
