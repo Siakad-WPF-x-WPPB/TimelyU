@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
-import 'package:timelyu/modules/auth/auth_controller.dart';
-import 'package:timelyu/data/services/ApiService.dart';
+import 'package:timelyu/data/services/auth_service.dart';
+import 'package:timelyu/modules/auth/auth_controller.dart'; // Sesuaikan path
 
 class AuthBinding extends Bindings {
   @override

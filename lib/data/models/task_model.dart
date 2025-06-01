@@ -38,6 +38,15 @@ class TaskModel {
     }
   }
 
+    DateTime get parsedDateTime {
+    try {
+      return _parseDateTime(date, time);
+    } catch (e) {
+      print("Error parsing date/time in TaskModel for task ID $id: $date $time - $e");
+      return DateTime(1970); // Tanggal default jika error
+    }
+  }
+
   DateTime _parseDateTime(String dateStr, String timeStr) {
     // Parse date in format "dd MMM yyyy" or "d MMM yyyy"
     final dateParts = dateStr.split(' ');

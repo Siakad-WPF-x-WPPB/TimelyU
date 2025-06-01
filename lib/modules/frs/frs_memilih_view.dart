@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+// Sesuaikan path import ini dengan struktur proyek Anda
 import 'package:timelyu/data/models/jadwal_matkul.model.dart';
-import 'package:timelyu/modules/frs/frs_controller.dart';
-import 'package:timelyu/shared/widgets/bottomNavigasi.dart'; // Pastikan path ini benar
-// import 'package:timelyu/shared/widgets/bottomNavigasi.dart'; // Diasumsikan diimpor jika digunakan
+import 'package:timelyu/modules/frs/frs_controller.dart'; // Jika FrsController ada di folder 'controllers'
+// import 'package:timelyu/modules/frs/frs_controller.dart'; // Atau jika di 'modules'
 
-// --- AppColors ---
+// --- AppColors --- (Pastikan kelas ini ada atau pindahkan ke file terpisah dan import)
 class AppColors {
   static const Color primary = Color(0xFF007AFF);
-  static const Color primaryLight = Color(0xFFE6F2FF);
-  static const Color accent = Color(0xFFFF9500);
-  static const Color textTitle = Color(0xFF1D1D1F);
-  static const Color textBody = Color(0xFF3C3C43);
-  static const Color textBodySecondary = Color(0xFF6E6E73);
-  static const Color background = Colors.white;
-  static const Color cardBackground = Colors.white;
-  static const Color cardSelectedBackground = Color(0xFFE6F2FF);
-  static const Color divider = Color(0xFFE0E0E0);
-  static const Color iconColor = Color(0xFF6E6E73);
-  static const Color buttonDisabled = Color(0xFFBDBDBD);
+  static const Color primaryLight = Color(0xFFE6F2FF); // Biru muda untuk background item terpilih
+  static const Color accent = Color(0xFFFF9500); // Oranye untuk aksen
+  static const Color textTitle = Color(0xFF1D1D1F); // Hitam pekat untuk judul
+  static const Color textBody = Color(0xFF3C3C43); // Abu-abu tua untuk teks utama
+  static const Color textBodySecondary = Color(0xFF6E6E73); // Abu-abu lebih muda untuk teks sekunder/hint
+  static const Color background = Colors.white; // Latar belakang utama scaffold
+  static const Color cardBackground = Colors.white; // Latar belakang kartu
+  static const Color cardSelectedBackground = Color(0xFFE6F2FF); // Warna kartu saat terpilih
+  static const Color divider = Color(0xFFE0E0E0); // Warna garis pemisah
+  static const Color iconColor = Color(0xFF6E6E73); // Warna ikon standar
+  static const Color buttonDisabled = Color(0xFFBDBDBD); // Warna tombol saat nonaktif
 }
 // --- End AppColors ---
 
@@ -29,15 +29,26 @@ class FrsInputView extends GetView<FrsController> {
 
   @override
   Widget build(BuildContext context) {
+    // Controller seharusnya sudah di-inject melalui GetX Bindings
+    // atau Get.put di halaman navigasi sebelumnya atau di main binding.
+    // final FrsController controller = Get.find<FrsController>(); // Alternatif jika tidak pakai GetView
+
     final TextEditingController searchController = TextEditingController();
-    // Jika controller belum di-inject, Anda bisa melakukannya di sini atau di Bindings
-    // Get.lazyPut(() => FrsController(), fenix: true); // fenix: true agar tidak error jika sudah ada
+    
+    // Sinkronkan searchController dengan searchQuery jika user menghapus teks via tombol clear di TextField
+    // atau jika searchQuery direset dari controller.
+    ever(controller.searchQuery, (String query) {
+        if (query.isEmpty && searchController.text.isNotEmpty) {
+            searchController.clear();
+        } else if (query.isNotEmpty && searchController.text != query) {
+            searchController.text = query; // Jika query diubah dari luar (misal reset)
+        }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
-          // Menggunakan ikon yang lebih standar untuk kembali
           icon: Icon(PhosphorIcons.arrowLeft(PhosphorIconsStyle.regular), color: AppColors.textTitle),
           onPressed: () => Get.back(),
         ),
@@ -82,12 +93,12 @@ class FrsInputView extends GetView<FrsController> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
                 filled: true,
                 fillColor: AppColors.background,
-                 suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+                  suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
                       ? IconButton(
                           icon: Icon(PhosphorIcons.xCircle(PhosphorIconsStyle.fill), color: AppColors.iconColor, size: 20),
                           onPressed: () {
-                            searchController.clear();
-                            controller.updateSearchQuery('');
+                            // searchController.clear(); // Ini akan memicu onChanged TextField
+                            controller.updateSearchQuery(''); // Langsung update state di controller
                           },
                         )
                       : const SizedBox.shrink()),
@@ -99,32 +110,38 @@ class FrsInputView extends GetView<FrsController> {
           ),
           Expanded(
             child: Obx(() {
-              if (controller.isLoadingJadwalPilihan.value) {
+              print("FrsInputView: Rebuilding Obx for list display. isLoadingJadwalPilihan: ${controller.isLoadingJadwalPilihan.value}");
+              if (controller.isLoadingJadwalPilihan.value && controller.filteredJadwalPilihanList.isEmpty) {
+                // Tampilkan loading hanya jika list juga kosong, agar tidak menutupi list lama saat refresh
                 return const Center(child: CircularProgressIndicator(color: AppColors.primary));
               }
               if (controller.selectedTahunAjar.value == null || controller.selectedSemester.value == null){
-                 return _buildInstructionText("Pilih Tahun Ajar dan Semester untuk melihat jadwal.");
-              }
-              // KONDISI DIPERBAIKI: Gunakan filteredJadwalPilihanList.isEmpty
-              if (controller.filteredJadwalPilihanList.isEmpty && controller.searchQuery.value.isNotEmpty) {
-                return _buildInstructionText("Tidak ada mata kuliah yang cocok dengan pencarian '${controller.searchQuery.value}'.");
-              }
-              if (controller.jadwalPilihanList.isEmpty && controller.searchQuery.value.isEmpty) {
-                 // Jika jadwalPilihanList (data asli dari API) kosong
-                 return _buildInstructionText("Tidak ada jadwal mata kuliah tersedia untuk periode ini.");
-              }
-              if (controller.filteredJadwalPilihanList.isEmpty && controller.searchQuery.value.isEmpty && controller.jadwalPilihanList.isNotEmpty){
-                // Ini seharusnya tidak terjadi jika logika filter benar, tapi sebagai fallback
-                return _buildInstructionText("Tidak ada jadwal yang ditampilkan. Coba filter lain.");
+                  return _buildInstructionText("Pilih Tahun Ajar dan Semester untuk melihat jadwal.");
               }
 
+              final displayList = controller.filteredJadwalPilihanList;
+              print("FrsInputView: displayList (from filteredJadwalPilihanList) count = ${displayList.length}");
+
+
+              if (displayList.isEmpty) {
+                if (controller.searchQuery.value.isNotEmpty) {
+                  return _buildInstructionText("Tidak ada mata kuliah yang cocok dengan pencarian '${controller.searchQuery.value}'.");
+                } else {
+                  // Jika tidak loading, periode sudah dipilih, tidak ada search, tapi list kosong
+                  if (!controller.isLoadingJadwalPilihan.value) {
+                     return _buildInstructionText("Tidak ada jadwal mata kuliah yang dapat ditampilkan untuk periode dan filter saat ini.");
+                  } else {
+                    // Masih loading, tapi mungkin ada data lama, jadi jangan tampilkan teks "tidak ada jadwal" dulu
+                    return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                  }
+                }
+              }
 
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                // ITEM COUNT DIPERBAIKI
-                itemCount: controller.filteredJadwalPilihanList.length,
+                itemCount: displayList.length,
                 itemBuilder: (context, index) {
-                  final jadwalItem = controller.filteredJadwalPilihanList[index];
+                  final jadwalItem = displayList[index];
                   return _buildJadwalCard(context, jadwalItem);
                 },
               );
@@ -135,7 +152,6 @@ class FrsInputView extends GetView<FrsController> {
       ),
     );
   }
-
 
   Widget _buildInstructionText(String message) {
     return Center(
@@ -183,14 +199,14 @@ class FrsInputView extends GetView<FrsController> {
     );
   }
 
-  Widget _buildDropdownField({
+ Widget _buildDropdownField({
     required String label,
     required Rxn<String> value,
     required RxList<String> items,
     required Function(String?) onChanged,
     IconData? icon,
   }) {
-     return Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
@@ -207,14 +223,14 @@ class FrsInputView extends GetView<FrsController> {
                 border: Border.all(color: AppColors.divider, width: 1.2),
                 borderRadius: BorderRadius.circular(10),
                 color: AppColors.cardBackground,
-                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.05),
-                    spreadRadius: 1,
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  )
-                ]
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.05),
+                      spreadRadius: 1,
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    )
+                  ]
                 ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -305,7 +321,7 @@ class FrsInputView extends GetView<FrsController> {
     });
   }
 
-   Widget _buildCardInfoRow(IconData icon, String text, {bool isSelected = false}) {
+    Widget _buildCardInfoRow(IconData icon, String text, {bool isSelected = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [

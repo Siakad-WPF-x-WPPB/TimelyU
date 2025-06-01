@@ -1,7 +1,7 @@
 // lib/modules/schedule/full_schedule_controller.dart
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/data/models/schedule.dart';
+import 'package:timelyu/data/client/api_client.dart';
 import 'package:timelyu/data/services/schedule_service.dart';
 
 class FullScheduleController extends GetxController {

@@ -7,10 +7,10 @@ class NilaiController extends GetxController {
   final NilaiService _nilaiService = NilaiService();
 
   // Observable variables untuk filter
-  var selectedTahunAjaran = '2024/2025'.obs; // Contoh nilai awal
-  var selectedSemester = 'Genap'.obs;    // Contoh nilai awal
+  var selectedTahunAjaran = '2024/2025'.obs;
+  var selectedSemester = 'Genap'.obs;
 
-  // Daftar opsi filter (bisa juga diambil dari API jika dinamis)
+
   final List<String> tahunAjaranList = ['2025/2026','2024/2025', '2023/2024', '2022/2023', '2017/2018']; // Tambahkan 2017/2018 sesuai data API contoh
   final List<String> semesterList = ['Genap', 'Ganjil'];
 
@@ -72,11 +72,6 @@ class NilaiController extends GetxController {
       bool semesterMatch = nilai.semester.toLowerCase() == semester.toLowerCase();
       return tahunMatch && semesterMatch;
     }).toList());
-
-    if (displayedNilaiList.isEmpty && allNilaiList.isNotEmpty) {
-      // Jika tidak ada data setelah filter, mungkin tampilkan pesan atau biarkan kosong
-      // Get.snackbar('Info', 'Tidak ada data nilai untuk filter yang dipilih.');
-    }
   }
 
   // Methods untuk update filter dan terapkan ulang

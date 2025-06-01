@@ -1,5 +1,3 @@
-import 'dart:convert'; // Tidak perlu jika toJson tidak digunakan untuk stringify langsung
-
 class UserModel {
   final String id;
   final String nama;
@@ -39,27 +37,16 @@ class UserModel {
       nama: json['nama']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       nrp: json['nrp']?.toString(),
-
-      namaKelas: json['nama_kelas']?.toString(), // Pastikan key 'nama_kelas' ada di JSON dari /profile
-      namaProdi: json['nama_prodi']?.toString(), // Pastikan key 'nama_prodi' ada di JSON dari /profile
+      namaKelas: json['nama_kelas']?.toString(),
+      namaProdi: json['nama_prodi']?.toString(),
       jenisKelamin: json['jenis_kelamin']?.toString(),
       telepon: json['telepon']?.toString(),
       agama: json['agama']?.toString(),
       semester: json['semester']?.toString(),
-      tanggalLahir: json['tanggal_lahir'] != null && json['tanggal_lahir'].toString().isNotEmpty
-          ? DateTime.tryParse(json['tanggal_lahir'].toString())
-          : null,
-      tanggalMasuk: json['tanggal_masuk'] != null && json['tanggal_masuk'].toString().isNotEmpty
-          ? DateTime.tryParse(json['tanggal_masuk'].toString())
-          : null,
+      tanggalLahir: _parseDateTime(json['tanggal_lahir']),
+      tanggalMasuk: _parseDateTime(json['tanggal_masuk']),
       status: json['status']?.toString(),
       alamatJalan: json['alamat_jalan']?.toString(),
-      // provinsi: json['provinsi']?.toString(),
-      // kodePos: json['kode_pos']?.toString(),
-      // negara: json['negara']?.toString(),
-      // kelurahan: json['kelurahan']?.toString(),
-      // kecamatan: json['kecamatan']?.toString(),
-      // kota: json['kota']?.toString(),
     );
   }
 
@@ -79,12 +66,13 @@ class UserModel {
       'tanggal_masuk': tanggalMasuk?.toIso8601String(),
       'status': status,
       'alamat_jalan': alamatJalan,
-      // 'provinsi': provinsi,
-      // 'kode_pos': kodePos,
-      // 'negara': negara,
-      // 'kelurahan': kelurahan,
-      // 'kecamatan': kecamatan,
-      // 'kota': kota,
     };
+  }
+
+  static DateTime? _parseDateTime(dynamic dateValue) {
+    if (dateValue != null && dateValue.toString().isNotEmpty) {
+      return DateTime.tryParse(dateValue.toString());
+    }
+    return null;
   }
 }

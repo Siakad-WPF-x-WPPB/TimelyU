@@ -87,11 +87,6 @@ class NilaiView extends GetView<NilaiController> {
                           _buildNilaiRow('Nilai Angka', nilaiItem.nilaiAngka.toString()),
                           const SizedBox(height: 8),
                           _buildNilaiRow('Nilai Huruf', nilaiItem.nilaiHuruf),
-                          // Jika ingin menampilkan status & semester (jika ditambahkan ke model)
-                          // const SizedBox(height: 8),
-                          // _buildNilaiRow('Status', nilaiItem.status),
-                          // const SizedBox(height: 8),
-                          // _buildNilaiRow('Semester', nilaiItem.semester),
                         ],
                       ),
                     ),
@@ -109,19 +104,7 @@ class NilaiView extends GetView<NilaiController> {
   Widget _buildFilterSection() {
     return Container(
       padding: const EdgeInsets.all(16.0),
-      color: Colors.white, // Atau sedikit berbeda untuk memisahkan dari list
-      // Bisa ditambahkan shadow jika diinginkan
-      // decoration: BoxDecoration(
-      //   color: Colors.white,
-      //   boxShadow: [
-      //     BoxShadow(
-      //       color: Colors.grey.withOpacity(0.1),
-      //       spreadRadius: 1,
-      //       blurRadius: 3,
-      //       offset: Offset(0, 1),
-      //     ),
-      //   ],
-      // ),
+      color: Colors.white,
       child: Column(
         children: [
           Row(
@@ -234,9 +217,8 @@ class NilaiView extends GetView<NilaiController> {
             style: const TextStyle(
               fontSize: 14,
               color: Colors.black87,
-              // fontWeight: FontWeight.w500, // Bisa ditambahkan jika ingin nilai lebih tebal
             ),
-            textAlign: TextAlign.left, // Ubah ke left jika lebih sesuai
+            textAlign: TextAlign.left,
           ),
         ),
       ],

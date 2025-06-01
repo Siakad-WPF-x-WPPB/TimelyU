@@ -1,60 +1,83 @@
-// lib/controllers/task_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:timelyu/data/models/task_model.dart';
 import 'package:timelyu/data/services/task_service.dart';
 
 class TaskController extends GetxController {
-  final TaskService _taskService = Get.find<TaskService>();
-  
-  // State variables
+  final TaskService _taskService;
+
+  TaskController(this._taskService);
+
   final RxString selectedFilter = 'Semua'.obs;
   final RxList<TaskModel> filteredTasks = <TaskModel>[].obs;
   final RxBool isLoading = false.obs;
-  
+
   @override
   void onInit() {
     super.onInit();
-    // Initialize task list
     updateFilteredTasks();
   }
-  
-  // Update filter selection and refresh task list
+
   void setFilter(String filter) {
     selectedFilter.value = filter;
     updateFilteredTasks();
   }
-  
-  // Update filtered tasks based on selected filter
+
   Future<void> updateFilteredTasks() async {
     isLoading.value = true;
     try {
       final tasks = await _taskService.getTasksByFilter(selectedFilter.value);
       filteredTasks.assignAll(tasks);
+    } catch (e) {
+      // Handle error, e.g., show a snackbar
+      Get.snackbar('Error', 'Failed to load tasks: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }
   }
-  
-  // Toggle task completion status
+
   Future<void> toggleTaskCompletion(String id, bool isCompleted) async {
-    await _taskService.toggleTaskCompletion(id, isCompleted);
-    await updateFilteredTasks(); // Refresh list after update
+    try {
+      await _taskService.toggleTaskCompletion(id, isCompleted);
+      await updateFilteredTasks(); // Refresh list after update
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update task: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
-  
-  // Add a new task
+
   Future<void> addTask(TaskModel task) async {
-    await _taskService.addTask(task);
-    await updateFilteredTasks(); // Refresh list after adding
+    try {
+      await _taskService.addTask(task);
+      setFilter('Semua'); // Optionally reset filter or go to the filter that shows new task
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to add task: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
   
-  // Delete a task
+  Future<void> updateTask(TaskModel task) async { // Added for completeness
+    try {
+      await _taskService.updateTask(task);
+      await updateFilteredTasks();
+    } catch (e) {
+       Get.snackbar('Error', 'Failed to update task: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
   Future<void> deleteTask(String id) async {
-    await _taskService.deleteTask(id);
-    await updateFilteredTasks(); // Refresh list after deleting
+    try {
+      await _taskService.deleteTask(id);
+      await updateFilteredTasks(); // Refresh list after deleting
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to delete task: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
-  
-  // Get color configuration for status badge
+
+  // UI helper method for status badge colors
   Map<String, Color> getStatusColors(String status) {
     switch (status) {
       case 'Selesai':
